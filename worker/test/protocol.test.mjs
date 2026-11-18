@@ -1,7 +1,7 @@
 // Pure checks on the room's wire format and limits: no Durable Object, no sockets.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { castIndex, claimRefusal, BOUND_XZ, BOUND_Y_MIN, BOUND_Y_MAX, CHALK, VISUAL_LIMITS, MESSAGE_MAX, MOVE_HZ, parseClientMessage, playerFromHeaders, spawnPoint, takeToken } from "../src/protocol.js";
+import { castIndex, claimRefusal, BOUND_XZ, BOUND_Y_MIN, BOUND_Y_MAX, CHALK, VISUAL_BODY, VISUAL_LIMITS, VISUAL_LOWS, MESSAGE_MAX, MOVE_HZ, parseClientMessage, playerFromHeaders, spawnPoint, takeToken } from "../src/protocol.js";
 
 test("poses inside the bounds are accepted, rounded and their yaw wrapped", () => {
   const m = parseClientMessage(JSON.stringify({ t: "pose", x: 1.23456, y: -7, z: 3, yaw: 7 }));
@@ -21,7 +21,7 @@ test("poses inside the bounds are accepted, rounded and their yaw wrapped", () =
 });
 
 test("presentation phases are bounded integers and fit the existing pose envelope", () => {
-  const v = VISUAL_LIMITS.map((n, i) => i < 3 ? -n : n);
+  const v = VISUAL_LIMITS.map((n, i) => VISUAL_LOWS[i] < 0 ? VISUAL_LOWS[i] : n);
   const wire = JSON.stringify({ t: "pose", x: -159.999, y: -129.999, z: -159.999, yaw: -3.142, j: 7, w: 255, v });
   assert.ok(wire.length <= MESSAGE_MAX, "the largest bounded Ooga sample must not close its socket");
   assert.deepEqual(parseClientMessage(wire).v, v);
@@ -32,7 +32,9 @@ test("presentation phases are bounded integers and fit the existing pose envelop
   for (const r of [null, [], [0, 1, 0], [1, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 4, 0, 0, 0, 0], [0, 1, 256, 0, 0, 0], [0, 1, 0, 1001, 0, 0], [0, 1, 0, 1000, 1000, 1000], [0, 1, 0, 0.5, 0, 0]])
     assert.equal(parseClientMessage(JSON.stringify({ t: "pose", x: 0, y: 0, z: 0, yaw: 0, r })), null, "malformed rest never reserves a seat");
   assert.equal("v" in parseClientMessage('{"t":"pose","x":0,"y":0,"z":0,"yaw":0}'), false);
-  for (const bad of [null, [], v.slice(1), [...v, 0], v.map((n, i) => i === 3 ? 8192 : n), v.map((n, i) => i === 4 ? -1 : n), v.map((n, i) => i === 0 ? 150.5 : n)]) {
+  assert.deepEqual(parseClientMessage(JSON.stringify({ t: "pose", x: 0, y: 0, z: 0, yaw: 0, v: v.slice(0, VISUAL_BODY) })).v, v.slice(0, VISUAL_BODY), "an older page's pose, without the body's own, still rides");
+  for (const bad of [null, [], v.slice(1), [...v, 0], v.slice(0, VISUAL_BODY + 1), v.map((n, i) => i === 3 ? 8192 : n), v.map((n, i) => i === 4 ? -1 : n), v.map((n, i) => i === 0 ? 150.5 : n),
+    v.map((n, i) => i === 17 ? 2629 : n), v.map((n, i) => i === 18 ? -51 : n)]) {
     assert.equal(parseClientMessage(JSON.stringify({ t: "pose", x: 0, y: 0, z: 0, yaw: 0, v: bad })), null);
   }
 });
@@ -222,12 +224,12 @@ test("Sphere rooms 0–9 isolate voice by number, only the Conference Room locks
   assert.deepEqual(parseClientMessage('{"t":"door","op":"done","cycle":"abc-123"}'), { t: "door", op: "done", cycle: "abc-123" });
   assert.deepEqual(parseClientMessage('{"t":"door","op":"cancel","extra":true}'), { t: "door", op: "cancel" });
   assert.deepEqual(parseClientMessage('{"t":"door","op":"pass","door":"sphere-9","dir":"out"}'), { t: "door", op: "pass", door: "sphere-9", dir: "out" });
-  assert.deepEqual(parseClientMessage('{"t":"door","op":"lock","room":1,"pin":"0042"}'), { t: "door", op: "lock", room: 1, pin: "0042" });
-  assert.deepEqual(parseClientMessage('{"t":"door","op":"try","room":1,"pin":"1234","extra":1}'), { t: "door", op: "try", room: 1, pin: "1234" });
-  assert.deepEqual(parseClientMessage('{"t":"door","op":"unlock","room":1}'), { t: "door", op: "unlock", room: 1 });
-  for (const bad of ['{"t":"door","op":"lock","room":1,"pin":"123"}', '{"t":"door","op":"try","room":1}']) assert.equal(parseClientMessage(bad), null);
+  assert.deepEqual(parseClientMessage('{"t":"door","op":"lock","room":0,"pin":"0042"}'), { t: "door", op: "lock", room: 0, pin: "0042" });
+  assert.deepEqual(parseClientMessage('{"t":"door","op":"try","room":0,"pin":"1234","extra":1}'), { t: "door", op: "try", room: 0, pin: "1234" });
+  assert.deepEqual(parseClientMessage('{"t":"door","op":"unlock","room":0}'), { t: "door", op: "unlock", room: 0 });
+  for (const bad of ['{"t":"door","op":"lock","room":0,"pin":"123"}', '{"t":"door","op":"try","room":0}']) assert.equal(parseClientMessage(bad), null);
   // Every other room has no lock to set, try or open.
-  for (const room of [0, 2, 3, 4, 5, 6, 7, 8, 9]) for (const op of ["lock", "try", "unlock"]) assert.equal(parseClientMessage(JSON.stringify({ t: "door", op, room, pin: "1234" })), null, `${op} room ${room}`);
+  for (const room of [1, 2, 3, 4, 5, 6, 7, 8, 9]) for (const op of ["lock", "try", "unlock"]) assert.equal(parseClientMessage(JSON.stringify({ t: "door", op, room, pin: "1234" })), null, `${op} room ${room}`);
   for (const bad of [
     { t: "door", op: "ask", dir: "in", room: 10 }, { t: "door", op: "ask", dir: "in", room: -1 }, { t: "door", op: "ask", dir: "side", room: 1 },
     { t: "door", op: "go", cycle: "bad cycle" }, { t: "door", op: "done", cycle: "x".repeat(65) },

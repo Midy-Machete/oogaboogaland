@@ -30,6 +30,7 @@ const TYPES = {
   ".jpg": "image/jpeg",
   ".webp": "image/webp",
   ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
   ".xml": "application/xml; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
   ".mp4": "video/mp4",
@@ -91,7 +92,7 @@ function readOrNull(path) {
 }
 
 function respond(req, res, path, body) {
-  const extension = extname(path), response = previewResponse(body, TYPES[extension] || "application/octet-stream", req, extension === ".mp4" || extension === ".webm");
+  const extension = extname(path), response = previewResponse(body, TYPES[extension] || "application/octet-stream", req, extension === ".mp4" || extension === ".webm" || extension === ".m4a");
   res.writeHead(response.status, response.headers);
   res.end(response.body);
 }
@@ -102,6 +103,27 @@ function serveFile(req, res, path) {
   respond(req, res, path, body);
 }
 
+// Public, read-only totem feeds use the deployed Worker's edge cache. Never forward local cookies,
+// credentials, query strings or arbitrary paths; sign-in and every write API remain unavailable here.
+async function totemFeed(req, res, pathname) {
+  if (req.method !== "GET" && req.method !== "HEAD") return send(res, 405, "method not allowed");
+  try {
+    const headers = { Accept: "application/json" };
+    if (req.headers["if-none-match"]) headers["If-None-Match"] = req.headers["if-none-match"];
+    const response = await fetch(`https://oogabooga.land${pathname}`, { headers, redirect: "error", signal: AbortSignal.timeout(10000) });
+    const outgoing = { "Content-Type": "application/json", "Cache-Control": "no-cache" };
+    for (const name of ["etag", "retry-after"]) if (response.headers.has(name)) outgoing[name] = response.headers.get(name);
+    if (response.status === 304) { res.writeHead(304, outgoing); res.end(); return; }
+    if (!response.headers.get("content-type")?.includes("application/json")) throw new Error("feed unavailable");
+    const body = await response.text();
+    res.writeHead(response.status, outgoing);
+    res.end(req.method === "HEAD" ? undefined : body);
+  } catch {
+    res.writeHead(503, { "Content-Type": "application/json", "Retry-After": "60", "Cache-Control": "no-store" });
+    res.end(req.method === "HEAD" ? undefined : '{"error":"totem feed unavailable"}');
+  }
+}
+
 const server = createServer((req, res) => {
   // A malformed escape such as `/src/%` throws here; that is the request's fault, not the server's.
   let pathname;
@@ -110,6 +132,7 @@ const server = createServer((req, res) => {
   } catch {
     return send(res, 400, "bad request");
   }
+  if (pathname === "/api/repo-totems" || /^\/api\/totems\/[0-3]$/.test(pathname)) return void totemFeed(req, res, pathname);
   if (pathname === "/") return serveFile(req, res, join(site, "index.html"));
   if (pathname === "/src" || pathname === "/src/") return serveFile(req, res, join(src, "index.html"));
   if (pathname.startsWith("/src/")) {

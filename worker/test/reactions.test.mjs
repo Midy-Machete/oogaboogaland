@@ -38,12 +38,16 @@ const roomClass = (extra = {}) => {
     .replace("export class Room", "class Room") + "\nglobalThis.Room = Room;";
   const context = { ...protocol, ...studio, getPlayer, DurableObject: class {}, WebSocketRequestResponsePair: class {}, sfuClient, CAST_ROWS: [], Date, Map, Set, Response, Promise, ...extra };
   runInNewContext(source, context);
+  // Rooms built here without the constructor (Object.create) take the inspector's reporter switched off, as the
+  // constructor gives one without INSPECTOR_IDS.
+  context.Room.prototype.inspect = protocol.inspectReporter(null, {}, "Room", () => "", () => null);
   return context.Room;
 };
 const forbidden = (what) => () => { throw new Error(`a reaction touched ${what}`); };
 const reactionRoom = (clock) => {
   const Room = roomClass({ Date: { now: () => clock.now }, setTimeout: forbidden("setTimeout"), setInterval: forbidden("setInterval"), clearTimeout: () => {} });
   const room = Object.create(Room.prototype);
+  room.sockets = new Map();
   room.ctx = { storage: new Proxy({}, { get: (_, key) => forbidden(`storage.${String(key)}`) }) };
   room.env = {};
   room.players = new Map(); room.chatBuckets = new Map(); room.pinTries = new Map(); room.chat = protocol.chatLog();

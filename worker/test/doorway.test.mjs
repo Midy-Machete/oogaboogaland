@@ -10,7 +10,7 @@ import { getPlayer } from "../src/db.js";
 
 const host = () => {
   let now = 100000;
-  const accepted = [], alarms = [], runtime = { listed: null, pinged: null };
+  const accepted = [], alarms = [], writes = [], runtime = { listed: null, pinged: null };
   const socket = () => ({
     sent: [], closed: null, store: null,
     send(text) { this.sent.push(JSON.parse(text)); },
@@ -44,7 +44,7 @@ const host = () => {
     storage: {
       // As Cloudflare's storage: an array of keys answers a Map of those found.
       get: async (key) => Array.isArray(key) ? new Map(key.filter((k) => stored.has(k)).map((k) => [k, stored.get(k)])) : stored.get(key),
-      put: async (key, value) => stored.set(key, value), getAlarm: async () => alarms.length ? alarms.at(-1) : null,
+      put: async (key, value) => { writes.push({ key, value }); stored.set(key, value); }, getAlarm: async () => alarms.length ? alarms.at(-1) : null,
       setAlarm: async (at) => alarms.push(at),
     },
   };
@@ -60,10 +60,15 @@ const host = () => {
     await send(r, ws, { t: "pose", x: 1, y: 2, z: 3, yaw: 0 });
     await send(r, ws, { t: "zone", name: zone });
   };
-  return { room, join, send, enter, accepted, alarms, runtime, advance: (ms) => { now += ms; }, now: () => now };
+  return { room, join, send, enter, accepted, alarms, writes, stored, runtime, advance: (ms) => { now += ms; }, now: () => now };
 };
 
 const messages = (ws, t, op) => ws.sent.filter((m) => m.t === t && (op === undefined || m.op === op));
+// Whether any field of any frame a socket was sent, at any depth, is this value whole (never part of an id or a time).
+const carries = (ws, value) => {
+  const has = (v) => v !== null && typeof v === "object" ? Object.values(v).some(has) : String(v) === value;
+  return ws.sent.some(has);
+};
 
 test("the exterior doorway is FIFO, starts only after go, and releases on completion", async () => {
   const h = host(), r = h.room();
@@ -105,62 +110,62 @@ test("leases expire by alarm, disconnects release the doorway, and room transits
 
 test("a room locked from inside keeps everyone out but those with its PIN, and opens when its last occupant goes", async () => {
   const h = host(), r = h.room(), inside = await h.join(r, 1, "a"), friend = await h.join(r, 2, "b"), stranger = await h.join(r, 3, "c");
-  await h.enter(r, inside, "a", "sphere-1");
+  await h.enter(r, inside, "a", "sphere-0");
   await h.enter(r, friend, "b", "sphere");
   await h.enter(r, stranger, "c", "sphere");
   assert.ok(messages(friend, "welcome").at(-1).features.includes("room-lock-v1"));
   assert.deepEqual(messages(friend, "welcome").at(-1).locks, []);
-  await h.send(r, friend, { t: "door", op: "lock", room: 1, pin: "1234" });
+  await h.send(r, friend, { t: "door", op: "lock", room: 0, pin: "1234" });
   assert.equal(messages(friend, "door", "lock-result").at(-1).reason, "wrong-room", "only someone inside locks a room");
-  await h.send(r, inside, { t: "door", op: "lock", room: 1, pin: "1234" });
+  await h.send(r, inside, { t: "door", op: "lock", room: 0, pin: "1234" });
   assert.equal(messages(inside, "door", "lock-result").at(-1).ok, true);
-  assert.deepEqual(messages(stranger, "door", "locks").at(-1).rooms, [1], "everyone hears which rooms are locked");
-  assert.deepEqual(messages(inside, "door", "room-pin").at(-1), { t: "door", op: "room-pin", room: 1, pin: "1234" }, "those inside are shown the PIN");
-  assert.ok(!JSON.stringify(stranger.sent).includes("1234") && !JSON.stringify(friend.sent).includes("1234"), "nobody outside is told the PIN");
-  await h.send(r, stranger, { t: "door", op: "ask", dir: "in", room: 1 });
+  assert.deepEqual(messages(stranger, "door", "locks").at(-1).rooms, [0], "everyone hears which rooms are locked");
+  assert.deepEqual(messages(inside, "door", "room-pin").at(-1), { t: "door", op: "room-pin", room: 0, pin: "1234" }, "those inside are shown the PIN");
+  assert.ok(![stranger, friend].some((ws) => messages(ws, "door", "room-pin").length || carries(ws, "1234")), "nobody outside is told the PIN");
+  await h.send(r, stranger, { t: "door", op: "ask", dir: "in", room: 0 });
   assert.equal(messages(stranger, "door", "denied").at(-1).reason, "locked");
-  await h.send(r, stranger, { t: "zone", name: "sphere-1" });
+  await h.send(r, stranger, { t: "zone", name: "sphere-0" });
   assert.equal(r.players.get(3).zone, "sphere", "a locked room's zone cannot simply be claimed");
-  await h.send(r, stranger, { t: "door", op: "try", room: 1, pin: "0000" });
+  await h.send(r, stranger, { t: "door", op: "try", room: 0, pin: "0000" });
   assert.equal(messages(stranger, "door", "lock-result").at(-1).reason, "wrong");
-  await h.send(r, friend, { t: "door", op: "try", room: 1, pin: "1234" });
+  await h.send(r, friend, { t: "door", op: "try", room: 0, pin: "1234" });
   assert.equal(messages(friend, "door", "lock-result").at(-1).ok, true);
-  await h.send(r, friend, { t: "door", op: "ask", dir: "in", room: 1 });
+  await h.send(r, friend, { t: "door", op: "ask", dir: "in", room: 0 });
   assert.ok(messages(friend, "door", "grant").length, "the right PIN opens the door");
   await h.send(r, friend, { t: "door", op: "cancel" });
-  await h.send(r, friend, { t: "zone", name: "sphere-1" });
-  assert.equal(r.players.get(2).zone, "sphere-1");
+  await h.send(r, friend, { t: "zone", name: "sphere-0" });
+  assert.equal(r.players.get(2).zone, "sphere-0");
   assert.equal(messages(friend, "door", "room-pin").at(-1).pin, "1234", "someone walking in is shown it too");
   await h.send(r, friend, { t: "zone", name: "sphere" });
-  await h.send(r, friend, { t: "zone", name: "sphere-1" });
+  await h.send(r, friend, { t: "zone", name: "sphere-0" });
   assert.equal(r.players.get(2).zone, "sphere", "a pass is spent on walking in, so someone who left needs the PIN again");
   await h.send(r, inside, { t: "zone", name: "sphere" });
   assert.deepEqual(messages(stranger, "door", "locks").at(-1).rooms, [], "the room opens by itself once nobody is inside");
-  await h.send(r, stranger, { t: "zone", name: "sphere-1" });
-  assert.equal(r.players.get(3).zone, "sphere-1");
+  await h.send(r, stranger, { t: "zone", name: "sphere-0" });
+  assert.equal(r.players.get(3).zone, "sphere-0");
 });
 
 test("anyone inside may unlock, wrong tries run out, and a lock survives hibernation in its occupants' sockets", async () => {
   const h = host(), r = h.room(), inside = await h.join(r, 1, "a"), outside = await h.join(r, 2, "b");
-  await h.enter(r, inside, "a", "sphere-1");
+  await h.enter(r, inside, "a", "sphere-0");
   await h.enter(r, outside, "b", "sphere");
-  await h.send(r, inside, { t: "door", op: "lock", room: 1, pin: "4321" });
-  await h.send(r, inside, { t: "door", op: "lock", room: 1, pin: "9999" });
+  await h.send(r, inside, { t: "door", op: "lock", room: 0, pin: "4321" });
+  await h.send(r, inside, { t: "door", op: "lock", room: 0, pin: "9999" });
   assert.equal(messages(inside, "door", "lock-result").at(-1).reason, "already-locked");
   h.runtime.listed = h.accepted.filter((ws) => !ws.closed);
   const woken = h.room();
-  assert.deepEqual([...woken.roomLocks.keys()], [1], "the lock comes back from the occupants' attachments");
-  for (let i = 0; i < 5; i++) { h.advance(1000); await h.send(woken, outside, { t: "door", op: "try", room: 1, pin: "0000" }); }
+  assert.deepEqual([...woken.roomLocks.keys()], [0], "the lock comes back from the occupants' attachments");
+  for (let i = 0; i < 5; i++) { h.advance(1000); await h.send(woken, outside, { t: "door", op: "try", room: 0, pin: "0000" }); }
   h.advance(1000);
-  await h.send(woken, outside, { t: "door", op: "try", room: 1, pin: "4321" });
+  await h.send(woken, outside, { t: "door", op: "try", room: 0, pin: "4321" });
   assert.equal(messages(outside, "door", "lock-result").at(-1).reason, "wait", "five wrong tries make a socket wait, even with the right PIN");
   h.advance(61000);
-  await h.send(woken, outside, { t: "door", op: "try", room: 1, pin: "4321" });
+  await h.send(woken, outside, { t: "door", op: "try", room: 0, pin: "4321" });
   assert.equal(messages(outside, "door", "lock-result").at(-1).ok, true);
-  await h.send(woken, outside, { t: "door", op: "unlock", room: 1 });
+  await h.send(woken, outside, { t: "door", op: "unlock", room: 0 });
   assert.equal(messages(outside, "door", "lock-result").at(-1).reason, "wrong-room", "only someone inside opens it");
   h.advance(1000);
-  await h.send(woken, inside, { t: "door", op: "unlock", room: 1 });
+  await h.send(woken, inside, { t: "door", op: "unlock", room: 0 });
   assert.equal(messages(inside, "door", "lock-result").at(-1).ok, true);
   assert.deepEqual(messages(outside, "door", "locks").at(-1).rooms, []);
   assert.equal(woken.players.get(1).roomLock, null);
@@ -169,17 +174,17 @@ test("anyone inside may unlock, wrong tries run out, and a lock survives hiberna
 test("wrong PIN tries are the player's: a reconnect or a hibernation does not start them again", async () => {
   const h = host(), r = h.room(), inside = await h.join(r, 1, "a");
   let outside = await h.join(r, 2, "b");
-  await h.enter(r, inside, "a", "sphere-1");
+  await h.enter(r, inside, "a", "sphere-0");
   await h.enter(r, outside, "b", "sphere");
-  await h.send(r, inside, { t: "door", op: "lock", room: 1, pin: "2468" });
-  const wrong = async (room, ws) => { h.advance(1000); await h.send(room, ws, { t: "door", op: "try", room: 1, pin: "0000" }); return messages(ws, "door", "lock-result").at(-1).reason; };
+  await h.send(r, inside, { t: "door", op: "lock", room: 0, pin: "2468" });
+  const wrong = async (room, ws) => { h.advance(1000); await h.send(room, ws, { t: "door", op: "try", room: 0, pin: "0000" }); return messages(ws, "door", "lock-result").at(-1).reason; };
   for (let i = 0; i < 4; i++) await wrong(r, outside);
   r.webSocketClose(outside);
   outside = await h.join(r, 2, "b");
   await h.enter(r, outside, "b", "sphere");
   assert.equal(await wrong(r, outside), "wrong", "the fifth try is still answered");
   h.advance(1000);
-  await h.send(r, outside, { t: "door", op: "try", room: 1, pin: "2468" });
+  await h.send(r, outside, { t: "door", op: "try", room: 0, pin: "2468" });
   assert.equal(messages(outside, "door", "lock-result").at(-1).reason, "wait", "four tries, a reconnect and one more still make the player wait");
   h.advance(61000);
   for (let i = 0; i < 4; i++) await wrong(r, outside);
@@ -187,10 +192,10 @@ test("wrong PIN tries are the player's: a reconnect or a hibernation does not st
   const woken = h.room();
   assert.equal(await wrong(woken, outside), "wrong");
   h.advance(1000);
-  await h.send(woken, outside, { t: "door", op: "try", room: 1, pin: "2468" });
+  await h.send(woken, outside, { t: "door", op: "try", room: 0, pin: "2468" });
   assert.equal(messages(outside, "door", "lock-result").at(-1).reason, "wait", "the tally comes back with the socket after hibernation");
   h.advance(61000);
-  await h.send(woken, outside, { t: "door", op: "try", room: 1, pin: "2468" });
+  await h.send(woken, outside, { t: "door", op: "try", room: 0, pin: "2468" });
   assert.equal(messages(outside, "door", "lock-result").at(-1).ok, true, "the wait passes, and the right PIN opens the door");
 });
 
@@ -205,18 +210,52 @@ test("a cancelled door alarm does not pull the ordinary account sweep forward", 
   assert.equal(r.sweepAt, sweepAt);
 });
 
-test("a woken room keeps the pile loop's phase and the account sweep it stored", async () => {
+test("a woken room keeps the stored pile phase and sweep without redundant writes", async () => {
   const settle = () => new Promise(setImmediate);
   const h = host(), r = h.room();
   await settle();
   const born = r.loopEpoch;
   assert.ok(born > 0);
   assert.equal(r.sweepAt, born + protocol.SWEEP_MS);
-  h.advance(30000);
-  const woken = h.room();
+  const writes = () => h.writes.filter(({ key }) => key === "loopEpoch" || key === "sweepAt");
+  assert.deepEqual(writes(), [{ key: "loopEpoch", value: born }, { key: "sweepAt", value: born + protocol.SWEEP_MS }], "a fresh room initializes both keys once");
+  h.writes.length = 0;
+  for (let i = 0; i < 3; i++) {
+    h.advance(10000);
+    const woken = h.room();
+    await settle();
+    assert.equal(woken.loopEpoch, born, "every page keeps hearing the same crackle");
+    assert.equal(woken.sweepAt, born + protocol.SWEEP_MS, "a wake does not push the sweep out");
+  }
+  assert.deepEqual(writes(), [], "restoring existing timing creates no storage writes");
+
+  // A partially initialized/older room fills only the absent key, without moving the other one.
+  for (const key of ["loopEpoch", "sweepAt"]) {
+    h.stored.delete(key);
+    h.writes.length = 0;
+    const other = key === "loopEpoch" ? "sweepAt" : "loopEpoch", kept = h.stored.get(other);
+    h.advance(1000);
+    const woken = h.room();
+    await settle();
+    assert.equal(woken[other], kept);
+    assert.equal(woken[key], h.now() + (key === "sweepAt" ? protocol.SWEEP_MS : 0));
+    assert.deepEqual(writes(), [{ key, value: woken[key] }], "only the missing key is initialized");
+  }
+
+  // Suppressing constructor writes must not suppress the alarm's real deadline update.
+  const beforeSweep = h.room();
   await settle();
-  assert.equal(woken.loopEpoch, born, "every page keeps hearing the same crackle");
-  assert.equal(woken.sweepAt, born + protocol.SWEEP_MS, "a wake does not push the sweep out");
+  h.writes.length = 0;
+  h.advance(protocol.SWEEP_MS);
+  await beforeSweep.alarm();
+  const due = h.now() + protocol.SWEEP_MS;
+  assert.deepEqual(writes(), [{ key: "sweepAt", value: due }]);
+  h.writes.length = 0;
+  const afterSweep = h.room();
+  await settle();
+  assert.equal(afterSweep.sweepAt, due);
+  assert.equal(afterSweep.loopEpoch, beforeSweep.loopEpoch);
+  assert.deepEqual(writes(), [], "the advanced deadline survives another wake without a rewrite");
 });
 
 test("a hibernated room reconstructs its active lease and in-flight room transit", async () => {

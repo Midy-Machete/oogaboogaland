@@ -25,10 +25,9 @@
     pile: "This is the pile. Donations become bananas for the crew.",
     crew: "Every Ooga stands for one of the crew's contributors.",
     jumbotron: "The jumbotron shows the crew's activity, live.",
-    totems: "The totems light up when Bitcoin Core, BTCPay, LND or CLN merge a PR.",
-    timechain: "Out west, the Timechain Sphere: ten rooms behind one door, from a planetarium to a movie theater.",
-    timechainWalls: "Walk over the bridge and pick a room at the keypad, 0 to 9: each number opens a different room.",
-    timechainBoards: "Room 1, the Conference Room, has the live block and mining charts and the holdings desk.",
+    timechain: "Out west, the Timechain Sphere: eight rooms behind one door, from a planetarium to a movie theater.",
+    timechainWalls: "Walk over the bridge and pick a room at the keypad, 0 to 7: each number opens a different room.",
+    timechainBoards: "Room 0, the Conference Room, has the live block and mining charts and the holdings desk.",
     timechainShare: "Signed in, you share a room with whoever picks the same number. Only the Conference Room locks.",
     bca: "B.C.A., Banana Certified Accounting: the island's own accounting office.",
     bcaInside: "Gorillas walk in through its veil, put on suits and count the bananas at two walnut desks.",
@@ -77,7 +76,6 @@
     newsOnchain: "The kiosk takes tips on-chain now, as well as over Lightning, and tells you when yours confirms.",
     newsDonations: "New in the Factory: a donation kiosk. Your sats come out as bananas!",
     newsArcadeFront: "Ooga Arcade has a brand-new front.",
-    newsTotems: "The totems now light up for a day after Bitcoin Core, BTCPay, LND or CLN merge a PR.",
     newsChat: "Ooga Chat is open: it's the last pull tab on the island's drawer.",
     newsTess: "And me! I fly round the Factory now, and give tours there.",
     newsVoice: "Voice now follows you into every cave, with health bars and online dots.",
@@ -89,16 +87,16 @@
     newsArcade: "Ooga Arcade opened: games, tickets and prizes.",
     newsFactory: "The Lightning Factory opened: a Lightning node at work.",
     newsTimechain: "The Timechain Sphere opened out west. Walk inside!",
-    repos: "Over the stone bridge past the Oogatron: Repo Island, slowly turning, a carved totem for each of 170 open-source Bitcoin projects, sorted by kind.",
+    repos: "Over the stone bridge past the Oogatron: Merge Rock, slowly turning, a carved totem for each of 171 open-source Bitcoin projects, sorted by kind.",
     reposLit: "Each stands as tall as Bitcoin leans on its project, and lights up for a day after its repo merges a pull request.",
-    newsRepos: "Repo Island opened off the south rim: 170 totems, one for each open-source Bitcoin project. They light up when their repos merge."
+    newsRepos: "Merge Rock opened off the south rim: 170 totems, one for each open-source Bitcoin project. They light up when their repos merge."
   };
   // The island tour, one stop a landmark: where the view looks from (`eye`) and at (`look`), and the lines she says
   // there. She hovers between the view and the landmark, off to its right, and her beam lands on `look`.
   const STOPS = [
     { id: "pile", title: "The pile", eye: [6, 8, 11], look: [0, 1.2, 0], lines: ["pile", "crew"] },
-    { id: "totems", title: "Jumbotron and totems", eye: [7, 8, 7], look: [0, 5, 26], lines: ["jumbotron", "totems"] },
-    { id: "repos", title: "Repo Island", eye: [7, 12, 26], look: [0, 3, 62], lines: ["repos", "reposLit"] },
+    { id: "jumbotron", title: "Jumbotron", eye: [7, 8, 7], look: [0, 5, 26], lines: ["jumbotron"] },
+    { id: "repos", title: "Merge Rock", eye: [7, 12, 26], look: [0, 3, 62], lines: ["repos", "reposLit"] },
     { id: "timechain", title: "Timechain Sphere", eye: [-15, 16, 4], look: [-42, 5, 17], lines: ["timechain", "timechainWalls", "timechainBoards", "timechainShare"] },
     { id: "bca", title: "B.C.A.", eye: [-11, 9.5, -6.5], look: [-19, 4.5, -11], lines: ["bca", "bcaInside", "bcaMotto"] },
     { id: "lab", title: "EntropyLab", eye: [-6.5, 9.5, -11], look: [-11, 4.5, -19], lines: ["lab", "labInside", "labCrew"] },
@@ -121,7 +119,6 @@
     { date: "2026-10-16", at: "factory", line: "newsOnchain" },
     { date: "2026-10-15", at: "factory", line: "newsDonations" },
     { date: "2026-10-13", at: "arcade", line: "newsArcadeFront" },
-    { date: "2026-10-12", at: "totems", line: "newsTotems" },
     { date: "2026-10-12", at: null, line: "newsChat" },
     { date: "2026-10-10", at: "factory", line: "newsTess" },
     { date: "2026-10-07", at: null, line: "newsVoice" },
@@ -179,7 +176,7 @@
     lineAt: ids.flatMap((id) => BL.fx.beatsOf(lines[id]).map(() => id)) });
   // Lines about something beside a stop's landmark: while she says one she faces the middle of what the place hands
   // her under that name (`targets`) and points a beam at each of them at once, then goes back to the landmark.
-  const POINT_AT = { totems: "totems", newsTotems: "totems" };
+  const POINT_AT = {};
   // What is new after `seen`, the newest entry last answered (its `line` and `date`; null for none yet, which gets the
   // newest few): every entry listed above it, so one added later the same day still counts. If that entry has left the
   // list, every entry dated after it.
@@ -207,8 +204,8 @@
   // stands for the last place only in a trip ("take me there").
   const PLACES = {
     pile: ["pile", "banana pile", "bananas pile"],
-    totems: ["jumbotron", "oogatron", "totem", "totems"],
-    repos: ["repo island", "repos island", "repos", "repo", "repositories", "repository", "totem island", "stone bridge", "open source"],
+    jumbotron: ["jumbotron", "oogatron"],
+    repos: ["merge rock", "repo island", "repos island", "repos", "repo", "repositories", "repository", "totem", "totems", "totem island", "stone bridge", "open source"],
     timechain: ["timechain", "timechain sphere", "sphere"],
     bca: ["bca", "b c a", "banana certified accounting", "accounting"],
     lab: ["lab", "entropylab", "entropy lab"],
@@ -317,6 +314,13 @@
       login: null, newest: null, still: landing, settle: SETTLE, driven: null, asked: false, place: null, ask: null
     };
     const spot = { x: 0, y: 0, z: 0 }, home = pose(), from = pose(), to = pose();
+    const net = BL.net, sharedPose = new Array(12).fill(0);
+    let sharedToken = "", sharedConnection = "", queueShown = false, queueRoom = "", queueSeen = null, queueVisible = false, sharedDone = "", poseAt = 0, touchAt = 0, wasShared = false;
+    const shared = () => G === ISLAND_GUIDE && !!net.state.me && net.state.tessShared;
+    const queue = () => net.state.tessGuide;
+    const active = () => shared() && net.state.room === "live" && queue()?.phase === "active" && queue().token !== sharedDone && queue().until > net.serverNow();
+    const queueAction = op => net.sendTess({ op, token: queue()?.token || "" });
+    const touch = () => { if (active()) queueAction("touch"); };
     position.x = WORKS[0].at[0]; position.y = WORKS[0].at[1]; position.z = WORKS[0].at[2];
     // The offer and the tour's controls live on screen, in the HUD's wood, built for the visit and removed on leave.
     const panel = document.createElement("div");
@@ -330,6 +334,8 @@
     const row = document.createElement("div"), help = document.createElement("p");
     row.className = "greeter-row";
     help.className = "greeter-menu-help";
+    help.setAttribute("aria-live", "polite");
+    help.setAttribute("aria-atomic", "true");
     row.append(go, skip);
     // Under the offer, a question box and three suggestions, each of which the page answers by itself.
     const form = document.createElement("form"), field = document.createElement("input"), send = document.createElement("button");
@@ -367,6 +373,7 @@
       const text = field.value; field.value = ""; field.blur(); question(text);
     });
     field.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); field.blur(); } });
+    field.addEventListener("input", touch);
     const show = (phase) => {
       state.phase = phase;
       // Moving on from her offer drops a question still out with the Worker.
@@ -410,6 +417,7 @@
       if (track) rig.track();
     };
     const toWork = () => {
+      if (shared()) { sharedDone = queue()?.token || ""; queueAction("cancel"); sharedToken = ""; queueShown = false; queueRoom = ""; }
       let site = state.site;
       while (site === state.site) site = Math.floor(Math.random() * WORKS.length);
       state.site = site;
@@ -433,18 +441,22 @@
     };
     // Who the visitor is, once the page knows: the signed-in account, or none.
     const account = () => DEBUG_NEWS ? { login: "you", display: "you" } : BL.net.state.me;
+    const newsOffer = (me) => {
+      const fresh = DEBUG_NEWS ? NEWS.filter((n) => n.date >= DEBUG_NEWS) : freshAfter(lastSeen(me.login));
+      if (!fresh.length) return false;
+      const count = fresh.length;
+      state.kind = "news"; state.legs = legsOf(fresh); state.login = DEBUG_NEWS ? null : me.login; state.newest = fresh[0];
+      state.welcome = `Welcome back, ${me.display || me.login}! ${count === 1 ? "One new thing" : `${count} new things`} since you were last here. Want to see?`;
+      return true;
+    };
     // The visit's one greeting: the island tour for a visitor who is not signed in, until this browser has answered it;
     // for a signed-in one, what is new since their last visit here, or no greeting at all when nothing is.
     const greet = () => {
       world[G.greeted] = true;
+      if (shared()) { queueShown = true; queueRoom = ""; return; }
       const me = G.news ? account() : null;
       if (!me) { if (toured(G.toured)) return; state.kind = "island"; state.legs = TOUR; state.welcome = null; notice(); return; }
-      const fresh = DEBUG_NEWS ? NEWS.filter((n) => n.date >= DEBUG_NEWS) : freshAfter(lastSeen(me.login));
-      if (!fresh.length) return;
-      const count = fresh.length;
-      state.kind = "news"; state.legs = legsOf(fresh); state.login = DEBUG_NEWS ? null : me.login; state.newest = fresh[0];
-      state.welcome = `Welcome back, ${me.display || me.login}! ${count === 1 ? "One new thing" : `${count} new things`} since you were last here. Want to see?`;
-      notice();
+      if (newsOffer(me)) notice();
     };
     const notice = () => { rig.flare(); show("notice"); state.timer = 1.1; };
     const approach = () => { placeBy(); flyTo(spot.x, spot.y, spot.z, pace(6, spot.x, spot.y, spot.z), true); show("approach"); };
@@ -552,6 +564,11 @@
     };
     // The panel's two buttons and their keys: on, and back out.
     const forward = () => {
+      if (shared() && !active()) {
+        queueAction(queue()?.phase === "ready" ? "accept" : "join");
+        return;
+      }
+      touch();
       if (state.phase === "offer") {
         // Another actor or panel may have taken the controls since she offered. Leave its control and unread news alone.
         if (busy()) { toWork(); return; }
@@ -565,11 +582,15 @@
       }
     };
     const back = () => {
+      if (shared() && !active()) {
+        queueAction("cancel"); queueShown = false; queueRoom = ""; show("work"); return;
+      }
       if (state.phase === "offer") { answered(); say(state.asked ? "later" : "declined"); toWork(); }
       else if (state.phase === "tour") endTour(state.kind === "trip" ? "more" : "cancelled");
     };
     // Escape waves her off while she comes over or offers, and ends a tour, before the island's own Escape.
     const escape = () => {
+      if (shared() && queueShown && !active()) { back(); return true; }
       if (state.phase === "notice" || state.phase === "approach") { toWork(); return true; }
       if (state.phase === "offer" || state.phase === "tour") { back(); return true; }
       return state.phase === "returning" && state.holding;
@@ -579,6 +600,8 @@
     // offer then stands again for a follow-up.
     const question = (text) => {
       if (state.phase !== "offer" || state.ask || !text.trim()) return;
+      if (shared() && !active()) return;
+      touch();
       // Another actor or panel may have taken the controls since she offered.
       if (busy()) { toWork(); return; }
       const a = G.answer(text, state.place);
@@ -624,10 +647,13 @@
     };
     // A tap on her at work brings her over with the island tour; her rings flare and she nods at once, so the tap
     // shows before she arrives.
-    const tap = () => {
+    const tap = (granted = false) => {
+      if (shared() && !granted) { queueShown = true; queueRoom = ""; return; }
       if (state.phase !== "work" || busy()) return;
       world[G.greeted] = true;
       state.kind = "island"; state.legs = TOUR; state.again = true;
+      state.welcome = state.login = null;
+      if (granted && G.news) newsOffer(account());
       rig.flare(); rig.nod();
       placeBy(); flyTo(spot.x, spot.y, spot.z, pace(6, spot.x, spot.y, spot.z), true);
       show("approach");
@@ -660,8 +686,68 @@
       }
       lender = driver;
     };
+    // Queue state never carries conversation text or a view. Only the lease holder runs the private
+    // guide above; other visitors follow Tess's visible pose without touching their pilot or camera.
+    const sharedUpdate = (dt, elapsed) => {
+      if (!shared()) {
+        if (wasShared) { if (state.holding) release(); rig.hush(); sharedToken = ""; queueShown = false; queueRoom = ""; show("work"); }
+        wasShared = false; return false;
+      }
+      if (!wasShared) { if (state.holding) release(); rig.hush(); show("work"); }
+      wasShared = true;
+      if (net.state.room === "live" && sharedConnection !== net.state.connectionToken) {
+        sharedConnection = net.state.connectionToken; queueAction("watch");
+      }
+      if (active()) {
+        if (sharedToken !== queue().token) {
+          if (busy()) { sharedDone = queue().token; queueAction("cancel"); return true; }
+          if (state.holding) release();
+          rig.hush(); show("work");
+          sharedToken = queue().token; queueShown = true; queueRoom = ""; tap(true);
+        }
+        if ((state.phase === "tour" || state.phase === "returning") && elapsed - touchAt > 15) { touchAt = elapsed; touch(); }
+        return false;
+      }
+      if (sharedToken || state.holding || state.ask) {
+        if (state.holding) release();
+        rig.hush(); show("work"); sharedToken = ""; queueRoom = "";
+      }
+      const q = queue(), a = q?.pose, w = WORKS[0];
+      rig.clearPath(4, 1); rig.aims = null;
+      if (a) {
+        const k = 1 - Math.exp(-dt * 16);
+        position.x += (a[0] - position.x) * k; position.y += (a[1] - position.y) * k; position.z += (a[2] - position.z) * k;
+        rig.mode = a[3]; rig.aim.x = a[4]; rig.aim.y = a[5]; rig.aim.z = a[6];
+        rig.watch.x = a[7]; rig.watch.y = a[8]; rig.watch.z = a[9]; rig.watching = !!a[10]; rig.steady = !!a[11];
+      } else {
+        position.x = w.at[0]; position.y = w.at[1]; position.z = w.at[2];
+        rig.mode = 1; rig.aim.x = w.aim[0]; rig.aim.y = w.aim[1]; rig.aim.z = w.aim[2]; rig.watching = rig.steady = false;
+      }
+      rig.calm = !!q?.busy;
+      if (!queueShown && !world[G.greeted] && state.still && !busy()) {
+        watchStill(dt); state.seen += dt;
+        if (state.still && state.seen > NOTICE_AFTER) greet();
+      }
+      if (q !== queueSeen || queueShown !== queueVisible || net.state.room !== queueRoom) {
+        queueSeen = q; queueVisible = queueShown; queueRoom = net.state.room; show("queue"); panel.hidden = !queueShown;
+        heading.textContent = `${NAME} · island guide`;
+        const ready = q?.phase === "ready", waiting = q?.phase === "wait", connected = net.state.room === "live";
+        const full = !waiting && !ready && q?.count >= 32;
+        go.hidden = waiting; go.disabled = !connected || full;
+        go.textContent = ready ? "Talk to Tess" : "Join queue";
+        skip.textContent = waiting || ready ? "Leave queue" : "Not now";
+        help.textContent = !connected ? "Reconnecting · your place is held for 15 seconds"
+          : ready ? "Your turn · choose Talk to Tess within 20 seconds. Your conversation stays private."
+          : waiting ? `Your place: ${q.position} of ${q.count} · kept while you explore this island. When ready, accept within 20 seconds.`
+          : full ? "The queue is full. A place will open when another visitor finishes or leaves."
+          : "Talk privately with Tess, one visitor at a time. Join when you are ready.";
+      }
+      rig.update(dt, elapsed); return true;
+    };
     const update = (dt, elapsed) => {
       if (lender) { lender(rig, dt); rig.update(dt, elapsed); return; }
+      if (sharedUpdate(dt, elapsed)) return;
+      go.hidden = false; go.disabled = false;
       yieldToMovement();
       const actor = visitor();
       if (state.still && (state.phase === "work" || state.phase === "notice" || state.phase === "approach")) watchStill(dt);
@@ -748,11 +834,24 @@
       if (actor) { const p = actor.root.position; rig.watch.x = p.x; rig.watch.y = p.y - actor.baseY + (actor.bodyHeight || 1.2) * 0.8; rig.watch.z = p.z; }
       else { rig.watch.x = camera.position.x; rig.watch.y = camera.position.y; rig.watch.z = camera.position.z; }
       rig.update(dt, elapsed);
+      if (active() && elapsed - poseAt >= 0.25) {
+        poseAt = elapsed;
+        sharedPose[0] = position.x; sharedPose[1] = position.y; sharedPose[2] = position.z; sharedPose[3] = rig.mode;
+        sharedPose[4] = rig.aim.x; sharedPose[5] = rig.aim.y; sharedPose[6] = rig.aim.z;
+        // Without a driven Ooga the local look target is the private camera. Observers keep a neutral look.
+        sharedPose[7] = actor ? rig.watch.x : position.x; sharedPose[8] = actor ? rig.watch.y : position.y; sharedPose[9] = actor ? rig.watch.z : position.z;
+        sharedPose[10] = actor && rig.watching ? 1 : 0; sharedPose[11] = rig.steady ? 1 : 0;
+        // Millimetres keep even the farthest island pose below the room's 256-character frame limit.
+        for (let i = 0; i < sharedPose.length; i++) sharedPose[i] = Math.round(sharedPose[i] * 1000) / 1000;
+        net.sendTess({ op: "pose", token: sharedToken, a: sharedPose });
+      }
     };
     let suspended = false;
     const suspend = () => {
       if (suspended) return;
       suspended = true;
+      if (shared()) { sharedDone = queue()?.token || ""; queueAction("cancel"); }
+      sharedToken = sharedConnection = queueRoom = ""; queueShown = false;
       if (state.ask) { state.ask.abort(); pending(null); }
       window.removeEventListener("keydown", captureKey, true);
       if (state.holding) release();
@@ -768,7 +867,7 @@
       window.addEventListener("keydown", captureKey, true);
     };
     const dispose = () => { suspend(); rig.dispose(); };
-    return { root: rig.root, state, update, yieldToMovement, escape, tap, suspend, resume, dispose, liveGeometry: rig.liveGeometry, light: rig.light, lend, get holding() { return state.holding; }, get lent() { return !!lender; }, get speech() { return rig.speech; } };
+    return { root: rig.root, state, update, yieldToMovement, escape, tap, suspend, resume, dispose, liveGeometry: rig.liveGeometry, light: rig.light, lend, get coachingReady() { return state.phase === "work" || state.phase === "queue" && !queueShown; }, get holding() { return state.holding; }, get lent() { return !!lender; }, get speech() { return rig.speech; } };
   };
   BL.hubGuide = { create, NAME, LINES, STOPS, NEWS, freshAfter, legsOf, answer, SUGGESTIONS, fold, has };
 })();

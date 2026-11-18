@@ -1,9 +1,21 @@
+import { tessQueue } from "./tess-queue.js";
+export { tessQueue };
 import "../../src/js/arcade-cabinets.js";
 export const CABINETS = globalThis.BL.arcadeCabinets;
 export { hockey } from "./hockey.js";
 import "../../src/js/hockey-wire.js";
 export const HOCKEY = globalThis.BL.hockeyWire;
 export { block } from "./block.js";
+export { duel } from "./duel.js";
+import "../../src/js/duel-rules.js";
+export const DUEL = globalThis.BL.duelRules;
+import { audienceRoom, overhearing } from "./room-audience.js";
+export { audienceRoom, overhearing };
+import { commonsRoom } from "./room-commons.js";
+export { commonsRoom };
+// The Durable Object inspector's reporter (inspect-report.js), here so the room and game host take it with the rest.
+export { inspectReporter, INSPECT_FEATURE } from "./inspect-report.js";
+import { BACK_WHY } from "./inspect-report.js";
 import "../../src/js/block-wire.js";
 export const BLOCK = globalThis.BL.blockWire;
 import { parseStudioCommand, studioCanSpeak, STUDIO_ZONE } from "./studio-policy.js";
@@ -20,7 +32,8 @@ import "../../src/js/reaction-policy.js";
 //                 { t: "zone", name }            where that body is (see Zones below)
 //                 { t: "poker-voice", table }   0-9 while watching a table, null for the Ember Den floor
 //                 { t: "blend", to, k }          crossing toward voice group `to`, k of BLEND.STEPS along (null, 0: none)
-//                 { t: "hub", on }               this page shows the island and is visible (host candidates)
+//                 { t: "hub", on, props? }       this page shows the island and is visible (host candidates); `props`: it reads prop frames
+//                 { t: "prop", k, a }            a follower's round, blow or poke at a loose prop, for the host
 //                 { t: "visible", on }           this page is visible (Block Frenzy's host candidates, block.js)
 //                 { t: "mute", on }              this page muted its own microphone, for everyone's roster
 //                 { t: "hp", v, ko }             the driven body's health (normalized 0-100) and knockout flag
@@ -31,6 +44,9 @@ import "../../src/js/reaction-policy.js";
 //                                                primary, 2 the gun), 4 while aiming, plus the gun's rounds (0-31) times 8
 //                 { t: "shot", a }               a banana the driven Ooga fired: [from x, y, z, to x, y, z]
 //                 { t: "swing" }                 the driven Ooga's melee strike
+//                 { t: "duel", op, to?, kind?, hit? }  a duel (duel-rules.js, duel.js): `challenge` (`hit` true when made by
+//                                                landing a blow), `accept` or `decline` player `to`, `cancel` this page's
+//                                                challenge, `forfeit`, or a `hit` of `kind`
 //                 { t: "chat", text, clientId? }            a line for Ooga Chat (see Chat below)
 //                 { t: "pm", op, to, d?, n? }   a private conversation with player `to` (see Private below): `invite`,
 //                                               `accept`, `decline`, `block`, `end`, or `data` with a sealed frame `d`
@@ -56,6 +72,10 @@ import "../../src/js/reaction-policy.js";
 //                                                none; welcome/join carry j too
 //                 state.ws                       [id, w] pairs for every player holding a weapon, the same way
 //                 shot { id, a }, swing { id }   another player's shot or strike, to the players in their zone
+//                 duel { op, ... }           duels (duel.js): to everyone start { id, a, b, x, z, at, hp, now }, hp { id, hp, by,
+//                                            kind } and end { id, winner, loser, reason }; list { duels } after welcome; to
+//                                            one page challenged { from, exp, hit? }, challenging { to, exp }, refused { to, reason },
+//                                            declined { from }, withdrawn { from }, and end { id: 0, reason: "lost" }
 //                 release { name, reason }   the Ooga this socket claimed is not, or no longer, its to drive
 //                 host { id, followers }     who runs the NPCs now (0 for nobody) and how many pages follow
 //                                            them (a host with none sends nothing); binary NPC frames from them
@@ -138,6 +158,10 @@ export const MESSAGE_MAX = 256;
 // room, so it runs once a minute; three missed 10 s pings make a socket stale.
 export const STALE_MS = 90000;
 export const SWEEP_MS = 60000;
+// With only Ooga Chat's Commons members connected (no island players), whose sweep checks only a dead socket, a ban and
+// the hourly re-authentication, it runs every four minutes: one idle chat tab no longer wakes the room every minute.
+// Kept under the Inspector's STALE_MS and RECENT_MS (five minutes), since the room's report rides its sweep.
+export const MEMBER_SWEEP_MS = 240000;
 // Voice cleanup the SFU keeps refusing is given up after an hour, so a room nobody is in stops waking for it.
 export const CLEANUP_MS = 3600000;
 // Generous bounds around the hub: jetpack flight reaches about 140 out and 72 up, falls end at -120.
@@ -154,13 +178,28 @@ export const HP_HZ = 4;
 // Voice across a crossing (#392, src/js/voice-blend.js): a page sends its step along one a few times a second at most.
 export const BLEND = globalThis.BL.voiceBlend;
 export const BLEND_HZ = 8;
-// Close codes: 4000 follows a `kick` (replaced, stale, full); 4400 is a message the room cannot read.
+// Close codes: 4000 follows a `kick` (replaced, stale, full); 4400 is a message the room cannot read; 1011 is a message
+// whose handling threw, which ends that socket alone and leaves the page free to reconnect.
 export const CLOSE_KICK = 4000;
+export const CLOSE_ERROR = 1011;
 // NPC frames: the host sends about 4 a second, only while a page follows; a frame of every Ooga's pose is a few kilobytes.
 // Up to 128 bundled Oogas (112 floats each), plus the bounded event tail.
 // The former 16 KiB cap could not carry the org-wide roster after reconciliation.
 export const NPC_FRAME_MAX = 128 * 112 * 4 + 131072;
 export const NPC_HZ = 20;
+// The island's loose props (src/js/prop-sync.js): the same host's frames of the props that move, by their magic word,
+// at most 64 bodies of 14 bytes after a 10-byte header and about 15 a second, relayed to the pages that asked for
+// them (`hub`'s `props`); and a follower's own round ("s"), blow ("b"), poke ("k") or reset ("r") at one, or its asking
+// for a frame of everything ("f"), six numbers, relayed to the host alone as { t: "prop", k, a }.
+export const PROP_MAGIC = 0x31504f52;
+export const PROP_FEATURE = "props-v1";
+export const PROP_FRAME_MAX = 10 + 64 * 14;
+export const PROP_HZ = 20;
+export const PROP_KINDS = new Set(["s", "b", "k", "r", "f"]);
+export const PROP_RANGE = 4096;
+// A pose's fields are saved to its socket's attachment at most this often (room.js): every pose re-serialized the whole
+// attachment, the room's largest cost per inbound message. A woken room may find a player up to this far behind.
+export const POSE_SAVE_MS = 1000;
 export const CLOSE_PROTOCOL = 4400;
 export const CHAT_MAX = globalThis.BL.chatPolicy.MAX;
 export const CHAT_FEATURE = globalThis.BL.chatPolicy.FEATURE;
@@ -208,8 +247,8 @@ const PM_DATA = /^[A-Za-z0-9+/]+={0,2}$/;
 // announcements inside exactly one numbered room. Alarms, rather than timers, expire both while idle.
 export const DOOR_ZONE = "sphere";
 export const DOOR_ROOM = /^sphere-([0-9])$/;
-// Of the Sphere's ten rooms (0–9) only room 1, the Conference Room, has a lock (src/js/timechain-rooms.js `lockable`).
-export const LOCKABLE_ROOMS = [1];
+// Of the Sphere's rooms (0–9) only room 0, the Conference Room, has a lock (src/js/timechain-rooms.js `lockable`).
+export const LOCKABLE_ROOMS = [0];
 const sphereRoom = (room) => Number.isInteger(room) && room >= 0 && room <= 9;
 export const DOOR_CYCLE = /^[A-Za-z0-9_-]{1,64}$/;
 export const DOOR_GRANT_MS = 5000;
@@ -234,7 +273,7 @@ export const SWING_HZ = 4;
 export const SWING_BURST = 4;
 // The frames that change who sees and hears whom, each fanned out to the whole room: well over anything a page sends,
 // and low enough that one account cannot saturate the island's only room.
-export const CONTROL_FRAMES = new Set(["hub", "visible", "zone", "poker-voice", "mute", "body"]);
+export const CONTROL_FRAMES = new Set(["hub", "visible", "zone", "poker-voice", "mute", "body", "audience-view", "audience-resync"]);
 export const CONTROL_HZ = 8;
 export const CONTROL_BURST = 20;
 // Chalkboard: the EntropyLab board on the island, kept for good. One page at a time holds it, and only while its
@@ -281,10 +320,14 @@ export const sanitizeChat = (text) => globalThis.BL.chatPolicy.error(text) ? "" 
 
 const finite = (v) => typeof v === "number" && Number.isFinite(v);
 const round = (v) => Math.round(v * 1000) / 1000;
-// pose.v: centiradian head/aim angles, ownership/action flags and millisecond animation phases.
-export const VISUAL_LIMITS = [157, 157, 314, 8191, 240, 1200, 560, 440, 320, 1240, 100, 750, 1300, 280, 2000, 31, 31];
-export const validVisual = (v) => Array.isArray(v) && v.length === VISUAL_LIMITS.length
-  && v.every((n, i) => Number.isInteger(n) && n >= (i < 3 ? -VISUAL_LIMITS[i] : 0) && n <= VISUAL_LIMITS[i]);
+// pose.v: centiradian head/aim angles, ownership/action flags and millisecond animation phases, then the body's own
+// pose (its gait, the peek's lean, a close walk's step sideways and back, the shoulder's turn, how far onto a ladder),
+// each between its low and high. A page from before the body's pose sends the first VISUAL_BODY numbers alone.
+export const VISUAL_LOWS = [-157, -157, -314, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -50, -100, 0, -157, 0];
+export const VISUAL_LIMITS = [157, 157, 314, 8191, 240, 1200, 560, 440, 320, 1240, 100, 750, 1300, 280, 2000, 31, 31, 2628, 50, 100, 1, 157, 100];
+export const VISUAL_BODY = 17;
+export const validVisual = (v) => Array.isArray(v) && (v.length === VISUAL_LIMITS.length || v.length === VISUAL_BODY)
+  && v.every((n, i) => Number.isInteger(n) && n >= VISUAL_LOWS[i] && n <= VISUAL_LIMITS[i]);
 
 // pose.r: no rest (0), or seat, phase (entry/rest/exit), progress byte and the body's
 // signed quaternion xyz at 1/1000; nonnegative w is reconstructed by the renderer.
@@ -316,8 +359,14 @@ export const parseClientMessage = (text) => {
     if (!seat.outdoor) return { t: "cabinet", op: msg.op, id: msg.id, q: msg.q };
     return Number.isInteger(msg.slot) && CABINETS.slot(msg.slot) ? { t: "cabinet", op: msg.op, id: msg.id, q: msg.q, slot: msg.slot } : null;
   }
+  if (msg.t === "tess-guide") return tessQueue.parse(msg);
+  // Ooga Chat's panel (#665, room-audience.js): a zone to see, or a fresh snapshot of it.
+  if (msg.t === "audience-view" || msg.t === "audience-resync") return audienceRoom.parse(msg);
+  // Ooga Chat's outdoor handshake (#667): `enter` and `leave`, an epoch each.
+  if (msg.t === "outdoor") return audienceRoom.parseOutdoor(msg);
   if (msg.t === "hockey") return HOCKEY.parse(msg);
   if (msg.t === "bf") return BLOCK.parse(msg);
+  if (msg.t === "duel") return DUEL.parse(msg);
   if (msg.t === "studio") return parseStudioCommand(msg);
   if (msg.t === "pose") {
     const { x, y, z, yaw } = msg;
@@ -354,7 +403,8 @@ export const parseClientMessage = (text) => {
     if (msg.name === null) return { t: "body", name: null };
     return typeof msg.name === "string" && BODY_NAME.test(msg.name) ? { t: "body", name: msg.name } : null;
   }
-  if (msg.t === "hub") return typeof msg.on === "boolean" ? { t: "hub", on: msg.on } : null;
+  if (msg.t === "hub") return typeof msg.on === "boolean" ? (msg.props === true ? { t: "hub", on: msg.on, props: true } : { t: "hub", on: msg.on }) : null;
+  if (msg.t === "prop") return PROP_KINDS.has(msg.k) && Array.isArray(msg.a) && msg.a.length === 6 && msg.a.every((n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= PROP_RANGE) ? { t: "prop", k: msg.k, a: msg.a } : null;
   if (msg.t === "visible") return typeof msg.on === "boolean" ? { t: "visible", on: msg.on } : null;
   if (msg.t === "mute") return typeof msg.on === "boolean" ? { t: "mute", on: msg.on } : null;
   if (msg.t === "hp") return finite(msg.v) && typeof msg.ko === "boolean" ? { t: "hp", v: Math.max(0, Math.min(100, Math.round(msg.v))), ko: msg.ko } : null;
@@ -433,6 +483,10 @@ export const parseClientMessage = (text) => {
     }
     return PM_OPS.includes(op) ? { t: "pm", op, to } : null;
   }
+  // After a rejoin, while the inspector is on (INSPECT_FEATURE): why the page's last socket ended, the close code its
+  // browser saw (0 when there was none) and how long it was out of the room.
+  if (msg.t === "back") return BACK_WHY.includes(msg.why) && Number.isInteger(msg.code) && msg.code >= 0 && msg.code <= 4999 && typeof msg.clean === "boolean"
+    && Number.isInteger(msg.down) && msg.down >= 0 && msg.down <= 86400000 ? { t: "back", why: msg.why, code: msg.code, clean: msg.clean, down: msg.down } : null;
   if (msg.t === "poker-voice") return msg.table === null || Number.isInteger(msg.table) && msg.table >= 0 && msg.table < 10 ? { t: "poker-voice", table: msg.table } : null;
   return null;
 };
@@ -579,13 +633,14 @@ export const linkView = (links, id) => {
   return { wants, linked: wants.filter((other) => voiceLinked(links, id, other)) };
 };
 
-/** Map of player id → sorted ids that player should hear. A voice link needs only a receive session and a live microphone. */
+/** Map of player id → sorted ids that player should hear. A voice link needs only a receive session and a live microphone.
+ *  A player overhearing (room-audience.js `overhearing`) hears no place: only what `addSources` lists, and a linked partner. */
 export const voicePeers = (players, studio = null, links = null) => {
   const out = new Map();
   for (const p of players) {
     const ids = [];
     if (p.voice && p.voice.sub) {
-      const listens = voiceListener(p, studio);
+      const listens = voiceListener(p, studio) && !overhearing(p);
       for (const q of players) {
         if (q === p || !q.voice || !q.voice.track) continue;
         if (voiceLinked(links, p.id, q.id) || listens && voiceAudible(q, studio) && voiceTogether(p, q)) ids.push(q.id);

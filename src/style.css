@@ -1,54 +1,5 @@
-:root {
-  color-scheme: dark;
-  --bg: #0a0a0b;
-  --fg: #ededea;
-  --muted: #a6a6a2;
-  --faint: #6f6f6c;
-  --border: rgba(255, 255, 255, 0.09);
-  --accent: #d8892b;
-  --accent-text: #ffd9a0;
-  --ok: #22c55e;
-  --warn: #c9a44a;
-  --danger: #e5533d;
-  --paper: #f3efe4;
-  --wood: #8a6236;
-  --wood-dk: #5c4425;
-  --plank: #a9773f;
-  --wood-edge: #4a3319;
-  --nail: #3a2a18;
-  --stone: #3a3734;
-  --stone-dk: #2d2b28;
-  --stone-lt: #45413d;
-  --ink: #2a1a0c;
-  --ink-muted: rgba(42, 26, 12, 0.72);
-  --ink-faint: rgba(42, 26, 12, 0.5);
-  --planks: radial-gradient(circle at 9px 9px, var(--nail) 2.5px, transparent 3px), radial-gradient(circle at calc(100% - 9px) 9px, var(--nail) 2.5px, transparent 3px), radial-gradient(circle at 9px calc(100% - 9px), var(--nail) 2.5px, transparent 3px), radial-gradient(circle at calc(100% - 9px) calc(100% - 9px), var(--nail) 2.5px, transparent 3px), repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 11px), repeating-linear-gradient(180deg, var(--plank) 0 34px, var(--wood-edge) 34px 36px, var(--wood) 36px 70px, var(--wood-edge) 70px 72px);
-  /* The panels' dark sections, the reaction card, the banner's HUD buttons and every "tablet" box (tooltips, notes,
-     fields, the games' HUDs), one near-black. */
-  --slab-dark: #161412;
-  --tablet: var(--slab-dark);
-  --tablet-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 2px 0 rgba(0, 0, 0, 0.4);
-  --radius: 8px;
-  --mono: ui-monospace, "Cascadia Code", Menlo, Consolas, "DejaVu Sans Mono", monospace;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left: env(safe-area-inset-left, 0px);
-  --safe-right: env(safe-area-inset-right, 0px);
-  /* An installed web app has no browser toolbar. --home-chrome is how far the touch cluster can drop. */
-  --home-chrome: 0px;
-  --stick-inset: 96px;
-  --stick-size: 112px;
-  --act-inset: 64px;
-  /* A touch drawer's default height in percent of the screen; sheet.js reads it. */
-  --drawer-share: 24;
-}
-
 @media (display-mode: standalone) {
   :root { --home-chrome: 36px; }
-}
-
-* {
-  box-sizing: border-box;
 }
 
 html,
@@ -68,35 +19,6 @@ body {
 @media (display-mode: standalone) {
   html,
   body { height: 100vh; }
-}
-
-button,
-input,
-select {
-  font: inherit;
-  color: inherit;
-}
-
-/* A carved title stays hidden until hud.js swaps its text for lettering (and labels it), so the
-   fallback font never flashes while the page's scripts load. If the scripts never run, the plain
-   text shows after a few seconds rather than never. */
-[data-sign]:not([aria-label]) {
-  visibility: hidden;
-  animation: sign-fallback 0s 4s forwards;
-}
-
-@keyframes sign-fallback {
-  to {
-    visibility: visible;
-  }
-}
-
-.sign {
-  display: inline-block;
-  height: 1em;
-  width: auto;
-  overflow: visible;
-  vertical-align: -0.2em;
 }
 
 .stage {
@@ -393,8 +315,8 @@ body[data-active-scene="hub"] .home-link {
 }
 
 .sheet {
-  --sheet-chat-top: 207px;
-  --sheet-chat-left: 216px;
+  --sheet-chat-top: 143px;
+  --sheet-chat-left: 144px;
   position: fixed;
   top: calc(52px + var(--safe-top));
   right: 0;
@@ -662,9 +584,7 @@ body[data-active-scene="block"] .mode-hud {
 }
 
 .sheet-panels { display: contents; }
-.sheet-toggle-loot { top: 143px; height: 56px; }
 .sheet-toggle-chat { top: var(--sheet-chat-top); height: 56px; }
-.sheet:has(.sheet-toggle-loot[hidden]) { --sheet-chat-top: 143px; --sheet-chat-left: 144px; }
 .sheet-toggle svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5)); }
 .sheet[data-open="true"] .sheet-toggle[aria-selected="true"] .sheet-tab-face { background: linear-gradient(90deg, #b8844a, var(--plank)); }
 .sheet-toggle:focus-visible .sheet-tab-face { outline: 2px solid var(--accent); outline-offset: -3px; }
@@ -768,7 +688,6 @@ body[data-active-scene="block"] .mode-hud {
 
 .sheet[data-dock="bottom"] .sheet-toggle-bananas { left: 0; }
 .sheet[data-dock="bottom"] .sheet-toggle-bananas .sheet-tab-face { padding: 4px 18px 0; }
-.sheet[data-dock="bottom"] .sheet-toggle-loot { left: 144px; }
 .sheet[data-dock="bottom"] .sheet-toggle-chat { left: var(--sheet-chat-left); }
 
 /* Every panel touches an edge; its tabs face inward and fit with its body. */
@@ -867,40 +786,6 @@ body[data-active-scene="block"] .mode-hud {
   letter-spacing: 0;
 }
 
-/* The island's panels share one shape: a carved title with a status chip, one stone slab that scrolls and
-   takes every extra pixel of the drawer's height, and the panel's action pinned under it. The panel itself
-   scrolls only when the drawer is shorter than its fixed parts (a phone's keyboard up). */
-.panel {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow: auto;
-  padding: 12px 14px 10px;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.35) transparent;
-}
-
-.panel > .help { flex: none; margin: 0; }
-
-.panel-title {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 22px;
-}
-
-.panel .panel-title h2 {
-  margin: 0 auto 0 0;
-  font-size: 13px;
-  line-height: 1;
-  white-space: nowrap;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
-}
-
 .sheet-notifications { position: relative; flex: none; }
 .sheet-bell {
   position: relative;
@@ -940,81 +825,8 @@ body[data-active-scene="block"] .mode-hud {
   .sheet-bell { width: 40px; height: 40px; }
 }
 
-.panel-chip {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 7px;
-  border: 1px solid rgba(243, 239, 228, 0.22);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.28);
-  color: rgba(243, 239, 228, 0.72);
-  font-size: 9px;
-  line-height: 14px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.panel-chip:empty { display: none; }
-
-.panel-chip[data-tone="live"]::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 5px rgba(34, 197, 94, 0.55);
-}
-
-.panel-chip[data-tone="live"] { color: #bfeccb; border-color: rgba(34, 197, 94, 0.38); }
-.panel-chip[data-tone="test"] { color: #ffd84a; border-color: rgba(255, 216, 74, 0.45); background: rgba(255, 216, 74, 0.08); }
-.panel-chip[data-tone="wait"] { color: var(--accent-text); border-color: rgba(216, 137, 43, 0.42); }
-.panel-chip[data-tone="closed"] { color: #ffb4a6; border-color: rgba(229, 83, 61, 0.45); }
-
-.slab {
-  background: var(--slab-dark);
-  border: 2px solid var(--stone-dk);
-  border-radius: 9px 7px 10px 8px;
-  box-shadow: var(--tablet-shadow);
-}
-
-.panel > .slab {
-  flex: 1 1 auto;
-  min-height: 96px;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(243, 239, 228, 0.2) transparent;
-}
-
-.slab-head {
-  margin: 0;
-  color: var(--accent-text);
-  font-size: 10px;
-  line-height: 1;
-  white-space: nowrap;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
-}
-
 .roster-hint:not(:has(> :not([hidden]))) { display: none; }
 
-/* Bananas: the all-time total on top, its count and sats beneath, then the donors and the latest tips in the same
-   slab. Like every panel's slab it scrolls above the panel's action, so Feed the Oogas stays at the foot as
-   Contributor sign-in does; its sections never shrink, and each list scrolls inside its own window: the donors' five
-   donor rows tall (`--banana-five`), the latest tips' at least as tall and taking whatever room the slab has left. The
-   slab may shrink to nothing, so even a phone's short drawer keeps the action whole; only a drawer shorter than the
-   title and the action scrolls the panel. */
-.panel > .banana-slab {
-  --banana-five: calc(5 * (17px + 12px + 1px));
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 12px 12px 10px;
-}
-.banana-slab > section { flex: none; }
-.banana-slab > .banana-recent { flex: 1 0 auto; display: flex; flex-direction: column; }
 /* A phone on its side leaves the default drawer under 100px: too short to stack the title, a row of the slab and a
    44px Feed the Oogas. While the Bananas panel shows there, its untouched drawer stands at least 200px tall
    (sheet.js's BANANA_DRAWER, which also holds a resized or saved drawer to it and, that drawer too tall to leave the
@@ -1024,255 +836,14 @@ body[data-active-scene="block"] .mode-hud {
     --drawer-height: max(calc(var(--drawer-share) * 1vh), 200px);
   }
 }
-.banana-leaders,
-.banana-recent-list {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.45) transparent;
-}
-/* The donors' window holds five rows however few entries it has. The latest tips' is never shorter and grows into the
-   slab's spare room, unless it holds nothing: then it keeps the donors' height with its note under it. */
-.banana-leaders { height: var(--banana-five); }
-.banana-recent-list { flex: 1 0 var(--banana-five); min-height: var(--banana-five); }
-.banana-recent:has(> .banana-empty:not([hidden])) > .banana-recent-list { flex-grow: 0; }
-
-/* The total's title over it, and the total with the banana beside it as tall as its figures, both flush left. */
-.banana-hero {
-  display: grid;
-  row-gap: 4px;
-  text-align: left;
-}
-
-.banana-hero-value {
-  margin: 0;
-  color: var(--accent-text);
-  font-size: clamp(26px, 7vw, 34px);
-  font-weight: 700;
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
-  overflow-wrap: anywhere;
-}
-
-/* On the figures' baseline and a cap height tall (the em fallback is about a cap). */
-.banana-hero-icon {
-  width: 0.72em;
-  height: 0.72em;
-  width: 1cap;
-  height: 1cap;
-  margin-right: 0.2em;
-  vertical-align: baseline;
-  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
-}
-
-.banana-hero-label,
-.banana-totals dt,
-.banana-board-labels {
-  color: rgba(243, 239, 228, 0.58);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.banana-totals {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 12px 0 0;
-  padding-top: 10px;
-  text-align: left;
-}
-
-.banana-totals,
-.banana-rates,
-.banana-board {
-  border-top: 1px solid rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.banana-totals div { min-width: 0; }
-
-.banana-totals dd {
-  margin: 3px 0 0;
-  color: var(--paper);
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-/* A banana's price in dollars and sats, then a bitcoin's in bananas, a line each, flush left. A stale price dims; the
-   line says so on hover. */
-.banana-rates {
-  display: grid;
-  gap: 6px;
-  margin: 12px 0 0;
-  padding-top: 10px;
-  text-align: left;
-}
-
-.banana-rate {
-  min-width: 0;
-  margin: 0;
-  color: var(--paper);
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.banana-rate[data-tone="stale"] { color: rgba(243, 239, 228, 0.6); }
-/* The bitcoin line is measured on one line (hud.js `fitBtcRate`) and wraps only when even "100M sats" will not fit. */
-.banana-rate[data-fit="line"] { white-space: nowrap; }
-
-/* The banana before an amount, as a currency's sign: an em square centred on the figures after it. */
-.banana-rate-icon,
-.banana-amount-icon {
-  width: 1em;
-  height: 1em;
-  margin-right: 0.15em;
-  vertical-align: -0.15em;
-  vertical-align: calc((1cap - 1em) / 2);
-}
-
-#bananas-panel[data-unit="sats"] .banana-amount-icon { display: none; }
-
-.banana-board { margin-top: 12px; padding-top: 12px; }
-
-.banana-board-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.banana-units {
-  display: inline-flex;
-  flex: none;
-  padding: 2px;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-.banana-units button {
-  min-height: 24px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: rgba(243, 239, 228, 0.66);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.banana-units button[aria-pressed="true"] {
-  background: linear-gradient(#e2a04a, var(--accent));
-  color: var(--ink);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
-}
-
-.banana-units button:not([aria-pressed="true"]):hover,
-.banana-units button.virtual-hover:not([aria-pressed="true"]) {
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--paper);
-}
-
-.banana-units button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; }
-
-.banana-board-labels,
-.banana-leaders li {
-  display: grid;
-  grid-template-columns: 3ch minmax(0, 1fr) auto;
-  column-gap: 10px;
-  align-items: baseline;
-}
-
-.banana-board-labels { margin-top: 10px; padding: 0 2px 5px; }
-.banana-board-labels span:last-child { text-align: right; }
-
-.banana-leaders { margin: 0; padding: 0; list-style: none; }
-.banana-leaders li[hidden] { display: none; }
-
-/* A row's 17px line, 12px of padding and 1px rule are the `--banana-five` unit. */
-.banana-leaders li {
-  padding: 6px 2px;
-  border-top: 1px solid rgba(0, 0, 0, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
-  font-size: 12px;
-  line-height: 17px;
-}
-
-.banana-rank { color: rgba(243, 239, 228, 0.5); font-size: 10px; font-variant-numeric: tabular-nums; }
-.banana-leaders li:nth-child(-n + 3) .banana-rank { color: var(--accent-text); }
-/* A donor's name keeps to one line and ends in an ellipsis where it would not fit; hovering shows it whole. */
-.banana-donor { min-width: 0; overflow: hidden; color: var(--paper); text-overflow: ellipsis; white-space: nowrap; }
-.banana-donor[data-anon="true"] { color: rgba(243, 239, 228, 0.55); font-style: italic; }
-.banana-amount { color: var(--paper); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
-.banana-leaders li:first-child .banana-amount { color: var(--accent-text); }
-
-.banana-recent { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0, 0, 0, 0.4); }
-.banana-recent-filter { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11px; color: rgba(243, 239, 228, 0.7); cursor: pointer; }
-.banana-recent-filter input { margin: 0; accent-color: var(--accent); }
-.banana-recent-list { margin: 10px 0 0; padding: 0; list-style: none; }
-.banana-recent-list li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 10px;
-  align-items: baseline;
-  padding: 8px 2px;
-  border-top: 1px solid rgba(0, 0, 0, 0.35);
-  font-size: 12px;
-}
-/* The name and its check share one line, the check centred on the name's line rather than on its x-height; a name too
-   long for it ends in an ellipsis before the check, and hovering shows it whole. */
-.banana-recent-name { display: flex; align-items: center; min-width: 0; color: var(--paper); }
-.banana-recent-name[data-anon="true"] { color: rgba(243, 239, 228, 0.55); font-style: italic; }
-.banana-recent-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The orange check is a seal with a ridged rim (hud.js `verifiedSeal`). */
-.banana-verified {
-  display: inline-flex;
-  flex: none;
-  width: 13px;
-  height: 13px;
-  margin-left: 5px;
-}
-.banana-verified svg { width: 100%; height: 100%; }
-.banana-verified-seal { fill: var(--accent); }
-.banana-verified-tick { fill: none; stroke: #211b14; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.banana-recent-message { grid-column: 1 / -1; margin: 0; color: rgba(243, 239, 228, 0.7); overflow-wrap: anywhere; line-height: 1.4; }
-.banana-recent-list li[hidden], .banana-verified[hidden], .banana-recent-message[hidden] { display: none; }
-
-.banana-empty {
-  margin: 0;
-  padding: 14px 0 6px;
-  color: rgba(243, 239, 228, 0.62);
-  font-size: 10.5px;
-  text-align: center;
-}
-
-.banana-board-note {
-  margin: auto 0 0;
-  padding-top: 12px;
-  color: rgba(243, 239, 228, 0.48);
-  font-size: 9.5px;
-  line-height: 1.45;
-}
-
-@media (pointer: coarse) {
-  .banana-units button { min-height: 40px; padding: 0 12px; }
-}
-
 /* Ooga Chat: the log takes the height, the composer is pinned under it, and the account's name and the
    room's memory sit above it in one line each. */
 .panel[data-panel="chat"] > .panel-title { position: relative; }
 .panel[data-panel="chat"] > .panel-title h2 { margin-right: 0; }
 .chat-about { flex: none; margin-right: auto; }
 
-.chat-about summary {
+.chat-about summary,
+#players-diagnostics-info {
   display: grid;
   place-items: center;
   width: 22px;
@@ -1289,8 +860,11 @@ body[data-active-scene="block"] .mode-hud {
 
 .chat-about summary::-webkit-details-marker { display: none; }
 .chat-about[open] summary,
-.chat-about summary:hover { border-color: var(--accent); color: var(--accent-text); }
-.chat-about summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chat-about summary:hover,
+#players-diagnostics-info[aria-expanded="true"],
+#players-diagnostics-info:hover { border-color: var(--accent); color: var(--accent-text); }
+.chat-about summary:focus-visible,
+#players-diagnostics-info:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .chat-retention {
   position: absolute;
@@ -1533,6 +1107,80 @@ body[data-active-scene="block"] .mode-hud {
 .panel[data-panel="chat"][data-view="private"] > .panel-title > .chat-about { display: none; }
 /* Without the island's About button, the title itself keeps the room's chip and the bell at the right. */
 .panel[data-panel="chat"][data-view="private"] > .panel-title h2 { margin-right: auto; }
+/* Ooga Chat (cloud-panel.js), the last tab, and Ooga Chat's own (the app takes these rules): one roster
+   of circles, as many to a row as fit at 76 px or more a column (six in a 600 px panel) (speakers, then listeners) scrolling in its slab, the emoji bar and the footer. A speaker's
+   portrait carries a 3px ring past a 3px dark gap, green for the island, purple for Ooga Chat. A name keeps to one line, cut short with its whole self in its title. */
+.sheet-toggle-cloud { height: 56px; }
+.cloud-status [hidden] { display: none; }
+.panel > .cloud-roster {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); align-content: start; gap: 10px 4px; margin: 0; padding: 14px 8px;
+  overflow-y: auto; overscroll-behavior: contain; list-style: none; container-type: inline-size;
+}
+/* A tile (audience-tiles.js): the portrait with its ring and the hand or a reaction over its centre, at three quarters of
+   its size, the name, and the role under it after a speaker's microphone. A tile out of sight skips its layout and paint.
+   An emoji font draws its glyph a little above the middle of its line, so the overlay's top padding brings its ink down
+   onto the circle's centre. */
+.cloud-tile {
+  --face: 40px;
+  display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 6px 0 2px; border-radius: 6px;
+  content-visibility: auto; contain-intrinsic-block-size: auto 88px;
+}
+.cloud-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cloud-face { position: relative; flex: none; margin-bottom: 10px; }
+.cloud-portrait {
+  display: flex; align-items: center; justify-content: center; width: var(--face); height: var(--face); overflow: hidden;
+  border-radius: 50%; background: var(--stone-dk); box-shadow: 0 0 0 2px var(--stone-lt);
+}
+.cloud-tile[data-source="world"] .cloud-portrait { box-shadow: 0 0 0 3px var(--slab-dark), 0 0 0 6px #22c55e; }
+.cloud-tile[data-source="chat"] .cloud-portrait { box-shadow: 0 0 0 3px var(--slab-dark), 0 0 0 6px #b18aff; }
+.cloud-portrait > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cloud-portrait > svg { display: block; width: 62%; height: auto; shape-rendering: crispEdges; }
+.cloud-react {
+  position: absolute; inset: 0; display: grid; place-items: center; padding-top: 0.09em;
+  font-size: calc(var(--face) * 0.75); line-height: 1; pointer-events: none;
+}
+.cloud-hand { grid-area: 1 / 1; }
+/* The pop (reaction-bar.js) rises 7px as it goes and fades over its last quarter, so what the eye follows is the first
+   three quarters: started 3.25px low, it crosses the circle's centre a fifth of the way through and spends the rest of
+   its bright time above it. Under Calm it only fades, so it stays centred. */
+.cloud-pop { position: absolute; inset: 0; display: grid; place-items: center; padding-top: inherit; translate: 0 3.25px; pointer-events: none; }
+.cloud-pop[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .cloud-pop { translate: none; }
+}
+.cloud-name { display: flex; align-items: center; justify-content: center; gap: 4px; max-width: 100%; color: var(--paper); font-size: 10px; font-weight: 700; }
+.cloud-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-role { display: flex; align-items: center; gap: 4px; margin-top: 2px; color: rgba(243, 239, 228, 0.62); font-size: 9px; white-space: nowrap; }
+.cloud-role .roster-voice svg { width: 10px; height: 10px; }
+.cloud-mic[hidden] { display: none; }
+.cloud-foot { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; }
+.cloud-foot-name { min-width: 0; color: var(--paper); font-size: 11px; font-weight: 600; overflow-wrap: anywhere; }
+.cloud-foot-name:empty { display: none; }
+.cloud-foot-name[data-source="chat"]::before {
+  content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #b18aff; vertical-align: 1px;
+}
+.cloud-foot-actions { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.cloud-foot-actions .foot-button { white-space: nowrap; }
+.cloud-mute { width: 84px; padding: 0; }
+/* Join and Leave Voice (and Joining…, Leaving…) at one width, the widest's, so the footer never shifts. */
+.cloud-voice { width: 100px; padding: 0; }
+.cloud-foot-actions [hidden] { display: none; }
+/* The voice switch prompt (voice-handoff.js), the island's and Ooga Chat's alike: a planked card floating under the
+   banner, over the panels, that takes no focus by itself; Not now beside the amber Switch here. */
+.voice-handoff {
+  position: fixed; top: calc(76px + env(safe-area-inset-top, 0px)); left: 50%; z-index: 990; transform: translateX(-50%);
+  box-sizing: border-box; width: 340px; max-width: calc(100vw - 32px); padding: 14px 16px 16px;
+  border: 3px solid var(--wood-edge); border-radius: var(--radius); background: var(--planks);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 10px 30px rgba(0, 0, 0, 0.35); color: var(--paper);
+}
+.voice-handoff[hidden] { display: none; }
+.voice-handoff-title { margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
+.voice-handoff-body { margin: 0 0 14px; font-size: 12px; line-height: 1.45; }
+.voice-handoff-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+@media (pointer: coarse) {
+  .cloud-mic { padding: 6px; margin: -6px; }
+}
+
 .pm-head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; }
 .pm-head .pm-end { min-height: 24px; }
 .pm-title { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0; color: #cfe0ff; font-size: 11px; font-weight: 600; overflow-wrap: anywhere; }
@@ -1592,7 +1240,8 @@ body[data-active-scene="block"] .mode-hud {
   .chat-form input { min-height: 44px; }
   .chat-display-form input,
   .chat-display-save { min-height: 40px; }
-  .chat-about summary { width: 30px; height: 30px; }
+  .chat-about summary,
+  #players-diagnostics-info { width: 30px; height: 30px; }
 }
 
 .panel h2 {
@@ -1619,41 +1268,6 @@ body[data-active-scene="block"] .mode-hud {
   font-size: 10.5px;
   line-height: 1.5;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
-}
-
-.feed-open,
-.panel-primary {
-  display: block;
-  width: 100%;
-  margin-top: 14px;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 2px solid var(--wood-edge);
-  border-radius: 6px;
-  background: linear-gradient(#e2a04a, var(--accent));
-  color: var(--ink);
-  font-size: 15px;
-  box-shadow: 0 3px 0 var(--nail);
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.panel-primary { flex: none; margin: 0; }
-
-.feed-open .sign path,
-.panel-primary .sign path {
-  stroke: currentColor;
-  stroke-width: 0.3;
-}
-
-.feed-open:hover,
-.feed-open.virtual-hover,
-.feed-open:focus-visible,
-.panel-primary:hover,
-.panel-primary.virtual-hover,
-.panel-primary:focus-visible {
-  background: linear-gradient(#f0b05a, #e2a04a);
-  outline: none;
 }
 
 .modal {
@@ -1687,6 +1301,7 @@ body[data-active-scene="block"] .mode-hud {
 }
 
 .modal-close:hover,
+.modal-close.virtual-hover,
 .modal-close:focus-visible {
   background: rgba(0, 0, 0, 0.38);
 }
@@ -1904,6 +1519,12 @@ body[data-active-scene="block"] .mode-hud {
 .roster-presence[data-online="true"] {
   background: var(--ok);
   box-shadow: 0 0 5px rgba(34, 197, 94, 0.55);
+}
+
+/* An Ooga Chat speaker on a cloud (players.js): Ooga Chat's purple where a player's dot is green. */
+.roster-presence[data-online="cloud"] {
+  background: #b18aff;
+  box-shadow: 0 0 5px rgba(177, 138, 255, 0.6);
 }
 
 /* The name, on one line and cut short with an ellipsis where it would not fit, filling its cell: a button, with no
@@ -2406,10 +2027,14 @@ body[data-active-scene="block"] .mode-hud {
   cursor: pointer;
 }
 
-/* Reactions (reactions.js), on X Spaces' pattern in its dark mode: a near-black card, two rows of five emoji, a divider
-   and the raised hand pinned past it, under Online Oogas' list and Ooga Chat's input. A long press opens the picker
-   floating over the screen, in the same dark. Emoji are the system's own colour glyphs. */
+/* Reactions (reactions.js), on X Spaces' pattern in its dark mode: a near-black card, the ten emoji, a divider and the
+   raised hand pinned past it, over the account row of every panel that has one, on the island and in Ooga Chat's app
+   alike. The ten stand in one row where the panel is wide enough for them (the bar's own width, a container query)
+   and in two rows of five beside the hand where not. The card stops at 560px, centred, so a wide drawer's ten
+   stay together. A long press opens the picker floating over the screen, in the same dark. Emoji are the
+   system's own colour glyphs. */
 .reactions {
+  container: reactions / inline-size;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -2419,9 +2044,35 @@ body[data-active-scene="block"] .mode-hud {
 
 .reactions[hidden] { display: none; }
 
+/* The foot of every panel with the emoji bar, on the island and in Ooga Chat's app alike: the bar over the account row
+   (the name in a row with the buttons while they fit), or, once the foot is wide enough for both, the bar's one row
+   and the account row side by side, centred together. */
+.panel-foot {
+  container: panel-foot / inline-size;
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 16px;
+}
+
+.panel-foot > * { flex: 1 1 100%; min-width: 0; }
+.panel-foot > .account { flex: 1 1 100%; width: auto; }
+
+@container panel-foot (min-width: 960px) {
+  .panel-foot > * { flex: 0 1 auto; margin-top: 8px; }
+  .panel-foot > .account { flex: 0 1 auto; }
+  .panel-foot > .reactions { flex-basis: 560px; }
+}
+
 .reaction-bar {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
+  width: 100%;
+  max-width: 560px;
+  margin-inline: auto;
   gap: 6px;
   padding: 8px 10px;
   border-radius: 22px;
@@ -2438,6 +2089,10 @@ body[data-active-scene="block"] .mode-hud {
   flex: 1;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 2px 4px;
+}
+
+@container reactions (min-width: 460px) {
+  .reaction-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 0 2px; }
 }
 
 .reaction {
@@ -2680,6 +2335,29 @@ body[data-active-scene="block"] .mode-hud {
   .reaction-heart { width: 32px; height: 32px; font-size: 18px; }
 }
 
+/* Dropout consent stays compact; its explanation opens from the adjacent question mark. */
+#players-diagnostics { position: relative; }
+.diagnostics-label { display: flex; align-items: center; gap: 6px; }
+.diagnostics-label .players-speak { flex: 0 1 auto; white-space: normal; }
+.diagnostics-label input { flex: none; }
+#players-diagnostics-info { flex: none; padding: 0; }
+#players-diagnostics-status { color: #fff; }
+#players-diagnostics-help {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 10px;
+  background: #171b1a;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  color: #fff;
+}
+
+#players-diagnostics-help.diagnostics-help-above { top: auto; bottom: 100%; }
+
 /* Native disclosure keeps advanced settings together on every panel layout. */
 .players-settings { flex: none; }
 .players-settings:not(:has(.players-settings-content > :not([hidden]))) { display: none; }
@@ -2796,7 +2474,6 @@ body[data-active-scene="block"] .mode-hud {
 }
 
 .field input,
-.loot-assign,
 .chat-form input {
   width: 100%;
   min-height: 38px;
@@ -2810,7 +2487,6 @@ body[data-active-scene="block"] .mode-hud {
 }
 
 .field input:focus-visible,
-.loot-assign:focus-visible,
 .chat-form input:focus-visible {
   border-color: var(--accent);
 }
@@ -2859,122 +2535,6 @@ body[data-active-scene="block"] .mode-hud {
 .link:hover,
 .link.virtual-hover {
   color: var(--paper);
-}
-
-.loot {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.loot-row {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  align-items: center;
-  column-gap: 12px;
-  row-gap: 8px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.loot-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--tier) 22%, transparent), rgba(0, 0, 0, 0.4) 75%);
-  border: 1px solid color-mix(in srgb, var(--tier) 35%, transparent);
-}
-
-.loot-main {
-  min-width: 0;
-}
-
-.loot-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.loot-name {
-  min-width: 0;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.loot-tier {
-  flex: none;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 4px;
-  color: var(--tier);
-  border: 1px solid color-mix(in srgb, var(--tier) 45%, transparent);
-  background: color-mix(in srgb, var(--tier) 10%, transparent);
-}
-
-.loot-count {
-  flex: none;
-  min-width: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--fg);
-  color: #111;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 18px;
-  text-align: center;
-}
-
-.loot-worn {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.chip {
-  padding: 2px 8px 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--muted);
-  font-size: 10px;
-  cursor: pointer;
-}
-
-.chip::after {
-  content: " ×";
-  color: var(--faint);
-}
-
-.chip:hover,
-.chip.virtual-hover {
-  color: var(--fg);
-  border-color: rgba(229, 83, 61, 0.6);
-}
-
-.chip:hover::after,
-.chip.virtual-hover::after {
-  color: var(--danger);
-}
-
-.loot-assign {
-  grid-column: 1 / -1;
-  min-height: 34px;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: calc(100% - 16px) 14px, calc(100% - 11px) 14px;
-  background-size: 5px 5px;
-  background-repeat: no-repeat;
-  padding-right: 28px;
-}
-
-.loot-assign:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* Account controls stay with their panel, including when detached. */
@@ -3055,6 +2615,9 @@ body[data-active-scene="block"] .mode-hud {
 .foot-button.virtual-hover,
 .foot-button:focus-visible { background: linear-gradient(#b8844a, var(--plank)); outline: none; }
 .foot-button:focus-visible { box-shadow: 0 2px 0 var(--nail), 0 0 0 2px var(--accent); }
+/* A button that can do nothing yet (Unmute before Join Voice, Join Voice where voice isn't open) reads as off, as the
+   panels' other buttons do, and a hover leaves it as it is. */
+.foot-button:disabled { opacity: 0.5; cursor: default; background: linear-gradient(var(--plank), var(--wood)); }
 
 .foot-primary {
   background: linear-gradient(#e2a04a, var(--accent));
@@ -3066,8 +2629,11 @@ body[data-active-scene="block"] .mode-hud {
 .foot-primary.virtual-hover,
 .foot-primary:focus-visible { background: linear-gradient(#f0b05a, #e2a04a); }
 
-/* In voice with the microphone live, the voice button wears the presence green. */
-.foot-button[aria-pressed="true"] { border-color: rgba(34, 197, 94, 0.75); }
+/* In voice with the microphone live, the voice button wears the presence green. A microphone button that says so in
+   `data-mic` (Ooga Chat's, both apps) is green on Mute and red on an enabled Unmute, and plain while disabled. */
+.foot-button[aria-pressed="true"]:not([data-mic]),
+.foot-button[data-mic="live"]:not(:disabled) { border-color: rgba(34, 197, 94, 0.75); }
+.foot-button[data-mic="muted"]:not(:disabled) { border-color: rgba(239, 68, 68, 0.8); }
 
 @media (pointer: coarse) {
   .foot-button { min-height: 40px; }
@@ -3206,6 +2772,8 @@ body[data-active-scene="block"] .mode-hud {
   font-size: 11px;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
 }
+
+.toast[data-diagnostics] { bottom: calc(80px + var(--safe-bottom)); }
 
 .toast[data-reload] {
   pointer-events: auto;
@@ -3816,6 +3384,12 @@ body.game-mode .weapon-equipment-row > :not(.weapon-hud) {
 }
 
 /* The hangar's sound panel under its Sound button: on or off, the level and the pad's vibration, on the planks. */
+/* Stable playback controls: changing a label never shifts its neighbours. */
+.presets[data-scene="timechain"] { flex-wrap: wrap; }
+#lecture-toggle { width: 76px; min-width: 76px; flex: 0 0 76px; }
+#lecture-speed { width: 64px; min-width: 64px; flex: 0 0 64px; font-variant-numeric: tabular-nums; }
+
+/* The Lecture Hall's question: the lecture waits on one of its answers. */
 .hangar-sound {
   position: absolute;
   top: calc(58px + var(--safe-top));
@@ -4472,7 +4046,7 @@ body.game-mode .weapon-equipment-row > :not(.weapon-hud) {
   to { transform: scaleX(1); }
 }
 
-/* The way out, beside the Ooga's face: an arrow out of a bracket, no words. Where a place's banner has a Leave button,
+/* The way out, beside the Ooga's face: an orange arrow over EXIT, an exit sign. Where a place's banner has a Leave button,
    hud.js shows this one, named by it, and the banner's own is kept out of sight. */
 body[data-leave-hud] .presets [data-action="leave"] {
   display: none;
@@ -4486,8 +4060,8 @@ body[data-leave-hud] .presets [data-action="leave"] {
 }
 
 .leave-icon {
-  width: 40px;
-  height: 40px;
+  width: 68px;
+  height: 42px;
   flex: none;
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
 }
@@ -5279,20 +4853,54 @@ body.dsb-menu-open .rescue-equipment { visibility: hidden; pointer-events: none;
 }
 
 /* While her tour holds the view the look stick does nothing and steps aside; the move stick stays, since moving ends
-   the tour and walks the Ooga, and on a touch screen her panel rises clear of the sticks. */
+   the tour and walks the Ooga. */
 body.tess-touring #joy-look {
   visibility: hidden;
 }
 
+/* Each stop's view puts its landmark in the middle of the screen, and on a touch screen the sticks and an open drawer
+   would lift the panel onto it. So her panel takes the equipment's slot under the top bar instead, matching its top in
+   every layout below, and the equipment, which does nothing on tour, steps aside for it. */
 @media (pointer: coarse) {
-  body.tess-touring .greeter-menu.greeter-tour {
-    bottom: calc(max(48px, var(--stick-inset) - var(--home-chrome)) + var(--stick-size) + 12px + var(--safe-bottom));
+  body.tess-touring .equipment-hud {
+    visibility: hidden;
+    /* Equipped readouts set their own visibility; fade the whole group out too. */
+    opacity: 0;
   }
 
-  /* With the bottom drawer open the sticks ride up on it (`--drawer-lift`), and the panel rises over them. The panel
-     stands on the stage, so a resized drawer's --drawer-height, which sheet.js writes there, reaches it too. */
-  body.tess-touring:has(.sheet[data-dock="bottom"][data-sticks="true"][data-open="true"]:not([hidden])) .greeter-menu.greeter-tour {
-    bottom: calc(var(--drawer-height) + var(--drawer-clear) + var(--stick-size) + 12px);
+  body.tess-touring .greeter-menu.greeter-tour {
+    top: calc(62px + var(--safe-top));
+    bottom: auto;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 720px) {
+  body.tess-touring .greeter-menu.greeter-tour {
+    top: calc(98px + var(--safe-top));
+  }
+
+  body.tess-touring .topbar:not(:has(.presets:not([hidden])))~.greeter-menu.greeter-tour {
+    top: calc(55px + var(--safe-top));
+  }
+}
+
+/* A short landscape screen has no room over the middle for both the panel and her bubble. She always flies to the
+   view's right, so the panel docks at the left, beside the move stick (#joy-move), which an open drawer lifts to it. */
+@media (pointer: coarse) and (max-height: 500px) and (orientation: landscape) {
+  body.tess-touring .greeter-menu.greeter-tour {
+    top: calc(62px + var(--safe-top));
+    left: calc(32px + var(--stick-size) + var(--safe-left));
+    transform: none;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 720px) and (max-height: 500px) and (orientation: landscape) {
+  body.tess-touring .greeter-menu.greeter-tour {
+    top: calc(64px + var(--safe-top));
+  }
+
+  body.tess-touring .topbar:has(.presets[data-scene="hub"]:not([hidden]))~.greeter-menu.greeter-tour {
+    top: calc(96px + var(--safe-top));
   }
 }
 
@@ -5667,7 +5275,25 @@ body.tess-touring #joy-look {
 .chalk-pointer { position: absolute; display: none; width: 1px; height: 1px; pointer-events: none; z-index: 2; }
 .chalk-pointer.visible { display: block; }
 .chalk-pointer .chalk-held { position: absolute; left: -5px; top: -5px; width: 38px; height: 10px; border-radius: 4px; background: #e5e8d0; transform: rotate(-38deg) scale(2); transform-origin: 5px 5px; box-shadow: 0 2px 4px #061f18b0; }
-.chalk-pointer.eraser .chalk-held { left: -29px; top: -19px; width: 52px; height: 32px; border: 3px solid #b8a183; background: #44413c; transform: rotate(-18deg) scale(4); transform-origin: center; }
+/* A classic board eraser from above, lying sideways: a long pine block, grain running its length, a groove along each long side, and its thick black felt pad showing along the bottom edge. chalkboard.js sizes it to the eraser's footprint, and all its look stays inside that box. */
+.chalk-pointer.eraser .chalk-held {
+  left: 0; top: 0; box-sizing: border-box; border: 1px solid #8a6a3e; border-bottom-color: #121110; border-radius: 0;
+  background:
+    linear-gradient(180deg, #0000 0 74%, #8a6a3e 74% 77%, #3b3936 77%, #151413 86%, #1f1d1b),
+    linear-gradient(180deg, #0000 0 10%, #8f7043 10% 15%, #f4e4c0 15% 18%, #0000 18% 56%, #8f7043 56% 61%, #f4e4c0 61% 64%, #0000 64%),
+    repeating-linear-gradient(180deg, #a9855033 0 2%, #0000 2% 5%, #a9855022 5% 6%, #0000 6% 11%),
+    linear-gradient(90deg, #ecd8ae, #dfc794);
+  box-shadow: none; transform: translate(-50%, -50%);
+}
+/* Held upright: the same block turned, its felt along the right edge. */
+.chalk-pointer.eraser.upright .chalk-held {
+  border-bottom-color: #8a6a3e; border-right-color: #121110;
+  background:
+    linear-gradient(90deg, #0000 0 74%, #8a6a3e 74% 77%, #3b3936 77%, #151413 86%, #1f1d1b),
+    linear-gradient(90deg, #0000 0 10%, #8f7043 10% 15%, #f4e4c0 15% 18%, #0000 18% 56%, #8f7043 56% 61%, #f4e4c0 61% 64%, #0000 64%),
+    repeating-linear-gradient(90deg, #a9855033 0 2%, #0000 2% 5%, #a9855022 5% 6%, #0000 6% 11%),
+    linear-gradient(#ecd8ae, #dfc794);
+}
 
 @media (max-width: 600px) {
   .chalk-modal { width: 98vw; padding: 7px; border-width: 4px; }
@@ -6171,6 +5797,27 @@ body.tess-touring #joy-look {
     grid-area: help;
   }
 }
+
+/* Live lecture screens get the viewport, with their controls below instead of a narrow side column. */
+.board-modal.board-expanded[open] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: min(1440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+.board-expanded .board-screen {
+  align-self: center;
+  flex: none;
+  width: min(100%, calc(max(120px, 100dvh - 230px) * var(--board-ratio, 1)));
+  margin: 0;
+  image-rendering: auto;
+  touch-action: none;
+}
+.board-expanded .board-note,
+.board-expanded .help { margin: 0; }
 
 .recipe-actions {
   grid-template-columns: 1fr;
@@ -7946,8 +7593,7 @@ body[data-active-scene] .mic-note { top: var(--hub-equipment-bottom, calc(72px +
 }
 
 @media (min-width: 620px) and (max-width: 720px) {
-  .sheet[data-dock="bottom"] .panel[data-panel="roster"] > .roster,
-  .sheet[data-dock="bottom"] .panel[data-panel="loot"] > .loot {
+  .sheet[data-dock="bottom"] .panel[data-panel="roster"] > .roster {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 16px;
@@ -8414,7 +8060,28 @@ body[data-active-scene="poker"] .ember-den-icon {
 }
 body[data-active-scene="dsb"] :is(#freeroam-icon, #weapon-hud, #magazine-hud) { display: none !important; }
 body[data-active-scene] :is(.world-clock, .world-block) {
-  right: calc(var(--hub-banner-button-right, calc(var(--hub-banner-gutter) + var(--safe-right))) + var(--hub-banner-button, 36px) * 2 + var(--hub-banner-button-gap, 8px) + 12px);
+  right: calc(var(--hub-banner-button-right, calc(var(--hub-banner-gutter) + var(--safe-right))) + var(--hub-banner-button, 36px) * 2 + var(--hub-banner-button-gap, 8px) + 12px + var(--hub-banner-account, 0px));
+}
+/* Sign in, or out again, left of the controls button and of its size: a mark alone, named by its label and tooltip.
+   hud.js publishes the room it takes (`--hub-banner-account`) for the clock to clear. */
+.account-top {
+  position: absolute;
+  top: var(--hub-banner-button-top, calc(10px + var(--safe-top)));
+  right: calc(var(--hub-banner-button-right, calc(var(--hub-banner-gutter) + var(--safe-right))) + (var(--hub-banner-button, 36px) + var(--hub-banner-button-gap, 8px)) * 2);
+  width: var(--hub-banner-button, 36px);
+  height: var(--hub-banner-button, 36px);
+  touch-action: manipulation;
+}
+.account-top[hidden], body:not([data-active-scene]) .account-top, body[data-active-scene="studio"] .account-top { display: none; }
+.account-top svg { width: calc(var(--hub-banner-button, 36px) * 2 / 3); height: calc(var(--hub-banner-button, 36px) * 2 / 3); }
+.account-top[data-signed="true"] .account-in, .account-top[data-signed="false"] .account-out { display: none; }
+/* A phone's banner has room for it only on the island, where its title is the banner's shortest; under 375px the clock
+   would meet the title, so the account row in Contributing Oogas is the way in there. */
+@media (max-width: 640px) {
+  body:not([data-active-scene="hub"]) .account-top { display: none; }
+}
+@media (max-width: 374px) {
+  .account-top { display: none; }
 }
 /* The controls and sound buttons, sized and placed by hud.js (`--hub-banner-button`, `-top`, `-right`, `-gap`). */
 .environment-sound {
@@ -11176,6 +10843,8 @@ body.dsb-menu-open :is(.bottom-hud,.top-hud,#joy-move,#joy-look,#act,.weapon-hud
   background: #5a3a22;
 }
 
+.block-target[data-map] { flex-basis: max-content; white-space: nowrap; }
+
 .block-side[data-team="blue"] {
   background: #1d4fa8;
 }
@@ -11284,16 +10953,12 @@ body.dsb-menu-open :is(.bottom-hud,.top-hud,#joy-move,#joy-look,#act,.weapon-hud
   }
 }
 
-/* Block Frenzy's Ooga picker on the board, and the touch paint button above the jump. */
+/* Block Frenzy's Ooga by name on the board (a narrow screen, where it isn't on show), and the touch paint button above the jump. */
 .block-ooga {
-  width: 100%;
-  min-height: 40px;
-  padding: 6px 8px;
-  border: 2px solid var(--wood-edge);
-  border-radius: 6px;
-  background: #2a1d12;
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
   color: #f3e6cc;
-  font: inherit;
 }
 
 .block-paint {
@@ -11373,15 +11038,26 @@ body.dsb-menu-open :is(.bottom-hud,.top-hud,#joy-move,#joy-look,#act,.weapon-hud
   gap: 4px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  /* Room over the row for the chosen slot to grow into. */
+  margin-top: 12px;
 }
 
 .block-slots button {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   display: grid;
   place-items: center;
+  transform-origin: 50% 100%;
+  transition: transform 0.12s ease-out;
+}
+
+/* The weapon in hand stands larger than the rest: grown and lifted in place, so no other slot moves. */
+.block-slots button[aria-pressed="true"] {
+  z-index: 1;
+  transform: translateY(-4px) scale(1.22);
+  background: rgba(64, 42, 22, 0.96);
 }
 
 .block-slots kbd {
@@ -11390,21 +11066,120 @@ body.dsb-menu-open :is(.bottom-hud,.top-hud,#joy-move,#joy-look,#act,.weapon-hud
   left: 3px;
   font: inherit;
   font-size: 10px;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
+/* The count: a fixed corner plate, so a changing number moves nothing. */
 .block-slots b {
   position: absolute;
-  right: 3px;
-  bottom: 1px;
-  font-size: 10px;
-  font-weight: normal;
+  right: 2px;
+  bottom: 2px;
+  min-width: 14px;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 14px;
+  text-align: center;
   color: #ffd27a;
 }
 
+.block-slots b:empty {
+  display: none;
+}
+
 .block-slot-icon {
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 30px;
+}
+
+.block-icon-tp {
+  fill: var(--block-team, #3a8dff);
+}
+
+.block-icon-td {
+  fill: var(--block-team-deep, #1d4fa8);
+}
+
+.block-icon-tl {
+  fill: var(--block-team-light, #9cc8ff);
+}
+
+/* Yours and out: the slot stays lit with a red 0. Not yours yet: dim and grey, a dashed edge, no count. */
+.block-slots button[data-state="empty"]:disabled {
+  opacity: 1;
+}
+
+.block-slots button[data-state="empty"] b {
+  color: #ff6a5a;
+}
+
+.block-slots button[data-state="empty"] .block-slot-icon {
+  opacity: 0.5;
+}
+
+.block-slots button[data-state="locked"] {
+  border-style: dashed;
+}
+
+.block-slots button[data-state="locked"] .block-slot-icon {
+  filter: grayscale(1);
+}
+
+.block-slots button[data-state="locked"] b {
+  display: none;
+}
+
+/* The chosen weapon's name, standing over its slot (`data-at`, placed by the scene) for as long as it is chosen. */
+.block-tool-name {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--wood-edge);
+  border-radius: 6px;
+  background: rgba(30, 20, 12, 0.9);
+  color: #ffd27a;
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.block-tool-name[data-show="true"] {
+  opacity: 1;
+}
+
+.block-tool-name[data-at="slot"] {
+  right: auto;
+  transform: translateX(-50%);
+  transition: opacity 0.25s, left 0.15s ease-out;
+}
+
+@media (max-width: 480px) {
+  .block-slots button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .block-slot-icon {
+    width: 36px;
+    height: 27px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-slots button,
+  .block-tool-name {
+    transition: none;
+  }
+
+  .block-tool-name[data-at="slot"] {
+    transition: none;
+  }
 }
 
 .block-actions {
@@ -11465,6 +11240,13 @@ body.dsb-menu-open :is(.bottom-hud,.top-hud,#joy-move,#joy-look,#act,.weapon-hud
   .block-slots {
     justify-content: center;
   }
+
+}
+
+/* Keep Throw above both sticks and Jump; the weapons bar starts above Throw. */
+@media (pointer: coarse) and (max-width: 720px) {
+  .block-paint { bottom: calc(max(48px, var(--stick-inset) - var(--home-chrome)) + var(--stick-size) + 8px + var(--safe-bottom)); }
+  .block-tools { bottom: calc(max(48px, var(--stick-inset) - var(--home-chrome)) + var(--stick-size) + 60px + var(--safe-bottom)); }
 }
 
 /* Block Frenzy's sprint gauge in the strip. */
@@ -11559,6 +11341,147 @@ body.dsb-menu-open :is(.bottom-hud,.top-hud,#joy-move,#joy-look,#act,.weapon-hud
   }
 }
 
+/* Block Frenzy's live tally. The visitor's own five counts stand under the map through a round (beside it on a short
+   screen, where the sticks are below). Everyone's, by side, show while Z is held or after a tap on the small panel:
+   the results table's side panels over the ghost hunt's scoreboard rows (`.ghost-score`: a face in a circle, the
+   leader's glowing green), here one Ooga a line with its name and counts. */
+.block-tally {
+  position: absolute;
+  z-index: 11;
+  right: calc(12px + var(--safe-right, 0px));
+  top: 314px;
+  box-sizing: border-box;
+  min-width: 88px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1px 6px;
+  padding: 4px 6px;
+  border: 2px solid var(--wood-edge);
+  border-radius: 6px;
+  background: rgba(30, 20, 12, 0.72);
+  color: #f3e6cc;
+  font-size: 9px;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.block-tally b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.block-tally-board {
+  position: absolute;
+  z-index: 13;
+  left: 50%;
+  top: calc(132px + var(--safe-top, 0px));
+  transform: translateX(-50%);
+  width: min(760px, calc(100% - 24px));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  color: var(--paper);
+  pointer-events: auto;
+}
+
+.block-tally-board[hidden] {
+  display: none;
+}
+
+.block-tally-board .ghost-scores {
+  position: static;
+  display: block;
+  max-width: none;
+  transform: none;
+}
+
+.block-tally-board .block-side-panel h3,
+.block-tally-board .ghost-score {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) repeat(5, 6ch);
+  align-items: center;
+  gap: 4px;
+}
+
+.block-tally-board h3 span {
+  grid-column: 1 / 3;
+}
+
+.block-tally-board .ghost-score canvas {
+  width: 20px;
+  height: 20px;
+  padding: 1px;
+  box-shadow: none;
+}
+
+.block-tally-board .ghost-score span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-tally-board .ghost-score b,
+.block-tally-board .ghost-score i {
+  grid-row: 1;
+  color: var(--paper);
+  font-size: 13px;
+  font-style: normal;
+  text-align: right;
+  text-shadow: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Grabbed leads, then the blocks mined (the row's points). */
+.block-tally-board .ghost-score i:nth-of-type(1) { grid-column: 3; }
+.block-tally-board .ghost-score b { grid-column: 4; }
+.block-tally-board .ghost-score i:nth-of-type(2) { grid-column: 5; }
+.block-tally-board .ghost-score i:nth-of-type(3) { grid-column: 6; }
+.block-tally-board .ghost-score i:nth-of-type(4) { grid-column: 7; }
+
+.block-tally-board .ghost-score[data-lead] b {
+  color: #8dffa6;
+}
+
+.block-tally-board .ghost-score[data-you] {
+  background: rgba(245, 197, 66, 0.16);
+  border-radius: 4px;
+}
+
+@media (max-width: 520px) {
+  .block-tally {
+    top: 343px;
+    min-width: 66px;
+    padding: 3px 4px;
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+
+  .block-tally-board {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .block-tally-board .block-side-panel h3,
+  .block-tally-board .ghost-score {
+    grid-template-columns: 24px minmax(0, 1fr) repeat(5, 5ch);
+    gap: 2px;
+  }
+}
+
+@media (max-height: 480px) {
+  .block-tally {
+    top: 160px;
+    right: calc(106px + var(--safe-right, 0px));
+  }
+
+  .block-tally-board {
+    top: calc(64px + var(--safe-top, 0px));
+  }
+}
+
 /* On a wide screen Block Frenzy's board sits on the left, leaving the right for the Ooga on show, with its name
    under it. */
 @media (min-width: 760px) {
@@ -11589,22 +11512,6 @@ body.dsb-menu-open :is(.bottom-hud,.top-hud,#joy-move,#joy-look,#act,.weapon-hud
   color: #f3e6cc;
 }
 
-.block-preview-pick {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 3px;
-  margin-top: 4px;
-  min-width: 220px;
-}
-
-.block-preview-pick label {
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.8;
-}
-
 .block-preview-name b {
   font-size: 16px;
 }
@@ -11614,8 +11521,79 @@ body.dsb-menu-open :is(.bottom-hud,.top-hud,#joy-move,#joy-look,#act,.weapon-hud
   opacity: 0.75;
 }
 
-#block-board[hidden] ~ .block-preview-name {
+#block-board[hidden] ~ .block-preview-name,
+#block-board[hidden] ~ .block-weapon-card {
   display: none;
+}
+
+/* The board's weapons preview: its card up by the weapon turning over the Ooga on show. The Ooga stands a share of
+   the view's height right of its middle, so on a view less wide for its height the card keeps further right, clear of
+   the weapon (the scene also holds the weapon left of the card's edge). */
+.block-weapon-card {
+  position: absolute;
+  z-index: 11;
+  right: max(12px, min(9vw, calc(50vw - 46vh - 250px)));
+  top: 14%;
+  width: 250px;
+  max-width: 28vw;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 14px 10px;
+  border: 2px solid var(--wood-edge);
+  border-radius: 8px;
+  background: rgba(30, 20, 12, 0.82);
+  color: #f3e6cc;
+}
+
+.block-weapon-card small {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.block-weapon-card b {
+  font-size: 16px;
+  color: #ffd27a;
+}
+
+/* Two lines held for the blurb, so the card keeps its height from weapon to weapon. */
+.block-weapon-card p {
+  margin: 0;
+  min-height: 3.9em;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.block-weapon-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.block-weapon-nav span {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.block-weapon-nav button {
+  min-width: 44px;
+  min-height: 36px;
+  border: 2px solid var(--wood-edge);
+  border-radius: 6px;
+  background: rgba(70, 44, 20, 0.88);
+  color: #f3e6cc;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.block-weapon-nav button:focus-visible {
+  outline: 2px solid #f7931a;
+  outline-offset: 2px;
 }
 
 /* Block Frenzy's jetpack fuel, beside the sprint gauge, in flame orange. */
@@ -11642,6 +11620,149 @@ body[data-active-scene] .topbar > .presets button { flex: 0 0 auto; }
 /* The hangar's Sound opens its volume and vibration panel, so it stays. */
 .topbar .presets :is([data-action="mute"], [data-action$="-mute"]):not([data-action="hangar-mute"]) { display: none; }
 body[data-active-scene] #environment-sound { display: flex; align-items: center; justify-content: center; }
+
+/* The character studio (scene-studio.js): the banner holds the title, the game's own equipment buttons and the controls
+   button, and the studio's buttons run down the left side under it, one width, lit while switched on. The title reads
+   OBL. The sound button is left out, and the clock and block height are kept out of sight but in place, since hud.js
+   fits the banner's row up to the clock's edge. */
+.studio-side {
+  position: absolute;
+  top: calc(var(--banner-controls-bottom, calc(68px + var(--safe-top))) + 6px);
+  left: calc(12px + var(--safe-left));
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+.studio-side button { flex: 0 0 auto; padding: 0 10px; }
+/* Its quick pick of every Ooga, in the banner where the controls button stands elsewhere, in the equipment buttons' look. */
+.studio-pick {
+  position: absolute;
+  top: var(--hub-banner-button-top, calc(10px + var(--safe-top)));
+  right: calc(var(--hub-banner-button-right, calc(var(--hub-banner-gutter) + var(--safe-right))) + var(--hub-banner-button, 36px) + var(--hub-banner-button-gap, 8px));
+  width: min(190px, 42vw);
+  height: var(--hub-banner-button, 36px);
+  padding: 0 8px;
+  background: var(--slab-dark);
+  border: 2px solid #221f1c;
+  border-radius: 9px 7px 10px 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 2px 0 rgba(0, 0, 0, 0.4);
+  color: var(--paper);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.studio-side [aria-pressed="true"] { border-color: var(--accent); color: var(--accent-text); }
+body[data-active-scene="studio"] #environment-sound { display: none; }
+body[data-active-scene="studio"] .controls-help-button { right: var(--hub-banner-button-right, calc(var(--hub-banner-gutter) + var(--safe-right))); }
+body[data-active-scene="studio"] :is(.world-clock, .world-block) { visibility: hidden; }
+/* Its This Ooga panel down the right side, under the banner and against the screen's right edge: what the file gives
+   the Ooga and how much of the intake's limit it takes, in the game's wood. Its left edge is a grip that drags it
+   wider or narrower (scene-studio.js sets its width), never over the studio's buttons on the left; its head stays
+   put while the rest scrolls under it. It folds to a tab on the right edge on every screen, so on a phone it never
+   slides down over the sticks. */
+.studio-features {
+  position: absolute;
+  top: calc(var(--banner-controls-bottom, calc(68px + var(--safe-top))) + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(270px, calc(100vw - 140px - var(--safe-left)));
+  min-width: min(200px, calc(100vw - 140px - var(--safe-left)));
+  max-width: calc(100vw - 140px - var(--safe-left));
+  max-height: calc(100% - var(--banner-controls-bottom, calc(68px + var(--safe-top))) - 24px - var(--safe-bottom));
+  padding: 8px calc(12px + var(--safe-right)) 12px 16px;
+  border: 3px solid var(--wood-edge);
+  border-right: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
+  background: var(--planks);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  color: var(--paper);
+}
+.studio-features[hidden] { display: none; }
+.studio-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wood-edge) rgba(0, 0, 0, 0.25);
+}
+.studio-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+}
+/* Its grip mark: two short lines down the middle of the edge, lit while held or focused. */
+.studio-resize::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 4px;
+  height: 34px;
+  margin-top: -17px;
+  border-left: 2px solid var(--wood-edge);
+  border-right: 2px solid var(--wood-edge);
+}
+.studio-resize:hover::before,
+.studio-resize:focus-visible::before,
+.studio-features[data-resizing="true"] .studio-resize::before { border-color: var(--accent); }
+.studio-resize:focus-visible { outline: none; }
+/* The words on the wood itself, the headings and the line under the title, are white; the rest sit on dark insets. */
+.studio-features .section-head { margin: 12px 0 5px; border-bottom-color: rgba(255, 255, 255, 0.3); color: var(--paper); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
+.studio-who { margin: 2px 0 0; color: var(--paper); font-size: 10px; overflow-wrap: anywhere; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
+.studio-bar { height: 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.4); overflow: hidden; }
+.studio-bar span { display: block; width: 0; height: 100%; background: var(--accent); }
+.studio-bar[data-state="full"] span { background: #e0603a; }
+.studio-size { margin: 5px 0 0; font-size: 14px; font-weight: 700; }
+#studio-size-parts:not(:empty) { margin-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.studio-note { margin: 2px 0 0; color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+.studio-note[data-state="bad"] { color: #ffb08a; }
+/* Its text sits on a dark inset, so the planks' seams never run through a line. */
+.studio-file,
+#studio-groups .studio-list { padding: 6px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.62); }
+.studio-list { margin: 0; padding: 0; list-style: none; }
+.studio-list li { display: flex; flex-direction: column; gap: 1px; padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.studio-list li:last-child { border-bottom: 0; }
+/* A label and its bytes: the bytes stand level with the label's middle, however many lines the label takes. */
+.studio-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.studio-head .studio-note { margin: 0; white-space: nowrap; line-height: 1; }
+.studio-head .studio-key { line-height: 1.3; }
+.studio-key { color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.studio-colours { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+/* A colour chip copies its value on a click, under the plain pointer: the copy cursor's badge would sit over its
+   tooltip. A name with a tooltip says so with a dotted underline. */
+.studio-chip { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.studio-chip:hover,
+.studio-chip:focus-visible { outline: none; text-decoration: underline; }
+.studio-copy { position: fixed; top: 0; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.studio-key[title] { cursor: help; text-decoration: underline dotted rgba(255, 255, 255, 0.4); text-underline-offset: 2px; }
+.studio-value { font-size: 12px; overflow-wrap: anywhere; }
+.studio-swatch { display: inline-block; width: 11px; height: 11px; margin-right: 6px; border: 1px solid rgba(0, 0, 0, 0.6); border-radius: 2px; vertical-align: -1px; }
+.studio-list .studio-bar { height: 4px; margin-top: 2px; }
+.studio-features-edge { top: calc(var(--banner-controls-bottom, calc(68px + var(--safe-top))) + 6px); }
+/* On a touch screen it stops above the sticks and the act button. */
+@media (pointer: coarse) {
+  .studio-features { max-height: calc(100% - var(--banner-controls-bottom, calc(68px + var(--safe-top))) - 210px - var(--safe-bottom)); }
+}
+@media (max-width: 720px) {
+  .studio-features[data-folded="true"] { transform: translateX(calc(100% + 90px + var(--safe-right))); }
+  .studio-features-edge {
+    top: calc(var(--banner-controls-bottom, calc(68px + var(--safe-top))) + 6px);
+    bottom: auto;
+    padding: 14px 6px;
+    writing-mode: vertical-rl;
+    border: 3px solid var(--wood-edge);
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+  }
+}
 
 /* Cave stations cycle through the OBL land button instead of a second camera toolbar. */
 .topbar .presets:is([data-scene="lab"], [data-scene="factory"], [data-scene="hangar"], [data-scene="bifrost"], [data-scene="arcade"]) [data-preset] { display: none; }
@@ -12039,7 +12160,7 @@ body[data-active-scene] #controls-help-button { display: flex; align-items: cent
 /* Keep the avatar and exit on one mobile row, clear of both the score and the playfield. */
 @media (max-width: 720px) {
   body.arcade-game[data-cabinet-phase="playing"] #equipment-hud { top: calc(54px + var(--safe-top)); left: calc(8px + var(--safe-left)); }
-  body.arcade-game[data-cabinet-phase="playing"] .topbar > .presets { top: calc(54px + var(--safe-top)); left: calc(74px + var(--safe-left)); max-width: calc(100% - 82px - var(--safe-left) - var(--safe-right)); }
+  body.arcade-game[data-cabinet-phase="playing"] .topbar > .presets { top: calc(54px + var(--safe-top)); left: var(--banner-equipment-right, calc(74px + var(--safe-left))); max-width: calc(100% - var(--banner-equipment-right, calc(74px + var(--safe-left))) - 8px - var(--safe-right)); }
   body.arcade-game[data-cabinet-phase="playing"] .topbar > .presets button { min-height: 40px; }
   body[data-cabinet-phase="playing"] #drop-board { top: calc(104px + var(--safe-top)); bottom: calc(16px + var(--safe-bottom)); max-height: none; transform: translateX(-50%); }
   body[data-cabinet-phase="playing"] .mine-strip { top: calc(104px + var(--safe-top)); }
@@ -12182,6 +12303,104 @@ body[data-cabinet-phase="menu"] .cloud-hopper-intro .cloud-hopper-scores-title {
 /* Arcade player controls remain reachable above game cards, including Cloud Hopper. */
 body.arcade-game .cloud-hopper-panel { z-index: 40; }
 
+/* A destination is a named action using the scene's existing travel rules. */
+.destination-map { width: min(1120px, calc(100vw - 24px)); max-height: calc(100dvh - 24px - var(--safe-top) - var(--safe-bottom)); overflow: auto; overscroll-behavior: contain; padding: 18px; border: 1px solid #9e8959; border-radius: 18px; background: #192a29; color: #f2eddd; box-shadow: 0 24px 90px #000b; }
+.destination-map::backdrop { background: #061314c9; }
+.destination-map .panel-head { position: sticky; top: -18px; z-index: 4; margin: -1px 0 0; padding: 10px 0; background: #192a29; }
+.destination-map .panel-head h2 { color: #f2eddd; font-size: clamp(18px, 2.4vw, 26px); }
+.destination-map-mode { color: #c3d6ca; font-size: 12px; line-height: 1.5; margin: 0 0 14px; letter-spacing: .06em; }
+.destination-map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; align-items: start; }
+.destination-map-survey { min-width: 0; }
+.destination-atlas { width: min(100%, calc((100dvh - 275px) * 1.2)); margin-inline: auto; position: relative; aspect-ratio: 6 / 5; overflow: hidden; border: 1px solid #52706b; border-radius: 12px; background: #112d35; isolation: isolate; }
+.destination-atlas[hidden] { display: none; }
+.destination-atlas canvas, .destination-atlas svg, #destination-atlas-pins { position: absolute; inset: 0; width: 100%; height: 100%; }
+.destination-atlas svg { pointer-events: none; }
+.destination-atlas-marker { position: absolute; transform: translate(-50%, -50%); width: 44px; height: 44px; min-width: 44px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #fff7de; font-size: 14px; line-height: 1; cursor: pointer; }
+.destination-atlas-marker[hidden] { display: none; }
+.destination-atlas-marker svg { position: static; width: 28px; height: 28px; padding: 4px; background: #203e3b; border: 1px solid #dcceaa; border-radius: 50%; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.destination-atlas-marker small { position: absolute; right: 0; bottom: 0; font-size: 10px; background: #203e3b; color: #fff7de; padding: 1px 3px; border-radius: 4px; }
+.destination-pin-label { display: none; position: absolute; top: 43px; max-width: 100px; width: max-content; padding: 3px 5px; font-size: 11px; line-height: 1.2; background: #102e39; border-radius: 4px; color: #fff7de; pointer-events: none; }
+.destination-atlas-marker:is(:hover,:focus-visible,[aria-pressed="true"]) .destination-pin-label { display: block; }
+.destination-atlas-marker:hover, .destination-atlas-marker[aria-pressed="true"] { background: #efd17e; color: #182d2a; border-color: #fff2c8; z-index: 1; }
+.destination-atlas-marker:is(:hover,[aria-pressed="true"]) svg { background: #efd17e; border-color: #182d2a; }
+.atlas-callout { stroke: #f1e7c8; stroke-width: 1.5; }
+.atlas-anchor { fill: #fff2c8; }
+.atlas-route { stroke: #f5d47a; stroke-width: 2.5; stroke-dasharray: 6 7; }
+.atlas-selected { fill: #e8cc5622; stroke: #f6d67d; stroke-width: 3; }
+.atlas-origin { fill: #102e39; stroke: #9de9eb; stroke-width: 3; }
+.atlas-origin-core { fill: #9de9eb; }
+.destination-map-key { display: flex; flex-wrap: wrap; gap: 5px 14px; margin: 10px 0 6px; color: #d3ddcf; font-size: 11px; line-height: 1.5; }
+.destination-map-key span:first-child { color: #9de9eb; }.destination-map-key span:nth-child(2) { color: #f6d67d; }
+.destination-map-mapnote { margin: 0; font-size: 11px; line-height: 1.5; color: #b6c9be; }
+#destination-map-list { display: grid; gap: 8px; max-height: 590px; overflow-y: auto; scrollbar-width: thin; padding: 3px; }
+#destination-map-list section { min-width: 0; }
+#destination-map-list h3 { color: #d9c28c; margin: 2px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
+#destination-map-list button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; min-height: 52px; padding: 9px 12px; margin-bottom: 5px; text-align: left; white-space: normal; color: #f2eddd; background: #233a35; border: 1px solid #496158; border-radius: 8px; }
+#destination-map-list button:hover, #destination-map-list button:focus-visible { background: #345145; }
+#destination-map-list button strong { font-size: 13px; }
+#destination-map-list button span { color: #c2d0bd; font-size: 11px; line-height: 1.4; font-weight: normal; }
+#destination-map-list button[aria-current] { border-color: #85aca0; }
+#destination-map-list button[aria-pressed="true"] { background: #435342; border-color: #f4d687; box-shadow: inset 3px 0 #f4d687; }
+.destination-map-preview { position: sticky; bottom: -18px; z-index: 3; display: flex; align-items: center; gap: 18px; justify-content: space-between; margin: 16px -1px 0; padding: 15px 0 12px; border-top: 1px solid #658072; background: #192a29; }
+.destination-map-tools, #destination-map-layers, .destination-map-tabs, .destination-map-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.destination-map-tools { justify-content: space-between; margin-bottom: 10px; }
+.destination-map-tools button, #destination-map-guide { min-height: 44px; min-width: 44px; margin: 0; padding: 8px 12px; color: #f2eddd; background: #233a35; border: 1px solid #658072; border-radius: 8px; }
+.destination-map-tools button[aria-pressed="true"] { outline: 2px solid #f6d67d; outline-offset: -2px; }
+.destination-map-tabs { display: none; }
+#destination-map-layers[hidden], #destination-map-list button[hidden], #destination-map-list section[hidden] { display: none; }
+#destination-return, #destination-waypoint { position: fixed; z-index: 46; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 24px); padding: 8px 12px; border: 1px solid #d9c28c; border-radius: 10px; background: #192a29f5; color: #fff1cc; }
+#destination-return { top: calc(132px + var(--safe-top)); min-height: 44px; }
+#destination-waypoint { top: calc(185px + var(--safe-top)); display: flex; align-items: center; gap: 10px; width: max-content; font-size: 12px; }
+#destination-waypoint-arrow { display: inline-block; font-size: 28px; }
+#destination-waypoint-stop { min-width: 44px; min-height: 44px; margin: 0; }
+#destination-return[hidden], #destination-waypoint[hidden], #destination-waypoint-arrow[hidden] { display: none; }
+.destination-map-preview > div { min-width: 0; }
+.destination-map-eyebrow { margin: 0 0 5px; font-size: 10px; letter-spacing: .14em; color: #e8cc8d; }
+#destination-map-selection { margin: 0 0 4px; font-size: 19px; color: #fff1cc; }
+#destination-map-detail { margin: 0; max-width: 650px; line-height: 1.5; color: #c7d6c7; font-size: 12px; }
+#destination-map-go { flex-shrink: 0; max-width: 260px; min-height: 48px; white-space: normal; padding: 12px 18px; border: 1px solid #fce4a0; border-radius: 9px; background: #ead08c; color: #192a29; font-size: 14px; font-weight: bold; }
+#destination-map-go:disabled { opacity: .5; }
+#destination-map-status { min-height: 1.5em; margin: 8px 0 0; color: #e4dcc5; font-size: 12px; line-height: 1.5; }
+.destination-map button:focus-visible, .explore-coach button:focus-visible { outline: 3px solid #b3f3ff; outline-offset: 3px; }
+#destination-map-close, #controls-learn { min-width: 44px; min-height: 44px; }
+.destination-map-receipt { position: fixed; z-index: 46; top: calc(68px + var(--safe-top)); left: 50%; transform: translateX(-50%); width: max-content; max-width: min(470px, calc(100vw - 32px)); padding: 13px 18px; border: 1px solid #e9d189; border-radius: 12px; background: #192a29ed; color: #fff1ce; box-shadow: 0 5px 24px #0008; font-size: 13px; line-height: 1.5; pointer-events: none; animation: map-arrival .32s ease-out; }
+.destination-map-receipt[hidden] { display: none; }
+.destination-map-receipt[data-kind="warp"] { border-color: #a7efd8; box-shadow: 0 0 0 6px #8ad7c61a, 0 5px 24px #0008; }
+#destination-map-effect { position: fixed; inset: 0; z-index: 44; pointer-events: none; animation: map-warp-settle .45s ease-out both; }
+#destination-map-effect[hidden] { display: none; }
+@keyframes map-warp-settle { from { box-shadow: inset 0 0 100px 20px #79c9b54d; } to { box-shadow: inset 0 0 0 0 #79c9b500; } }
+@keyframes map-arrival { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .destination-map-receipt { animation: none; } #destination-map-effect { display: none; animation: none; } }
+@media (max-width: 760px) {
+  .destination-map-tools button { padding: 6px; font-size: 11px; }
+  #destination-map-guide { font-size: 13px; }
+  .destination-map-tabs { display: flex; }
+  .destination-map[data-display="map"] #destination-map-list, .destination-map[data-display="list"] .destination-map-survey { display: none; }
+  .destination-map-actions { width: 100%; flex-wrap: nowrap; }
+  .destination-map-actions button { flex: 1; }
+  .destination-map { padding: 12px; }.destination-map .panel-head { top: -12px; }
+  .destination-map-layout { grid-template-columns: 1fr; gap: 12px; }
+  #destination-map-list { max-height: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #destination-map-list section[data-group="Play"] { grid-column: 1 / -1; }
+  .destination-map-preview { position: static; gap: 10px; flex-direction: column; align-items: stretch; }
+  #destination-map-go { max-width: none; width: 100%; }
+  #destination-map-detail { font-size: 11px; }
+}
+@media (max-height: 540px) {
+  .destination-atlas { width: 100%; }
+  .destination-map-preview { position: static; }
+  .destination-map-layout { grid-template-columns: minmax(0, 1fr) 230px; }
+  #destination-map-list { grid-template-columns: 1fr; max-height: none; }
+}
+@media (max-height: 540px) and (max-width: 520px) { .destination-map-layout { grid-template-columns: 1fr; } }
+@media (max-width: 380px) { #destination-map-list { grid-template-columns: 1fr; } }
+/* A coaching hint must not cover the controls of a floating Oogatron window (layers 20+). */
+.explore-coach { position: fixed; z-index: 19; top: calc(64px + var(--safe-top)); left: 50%; transform: translateX(-50%); width: min(340px, calc(100vw - 32px)); padding: 12px; border: 2px solid var(--accent-text); border-radius: 12px; background: #30271f; color: var(--paper); box-shadow: 0 4px 16px #0008; }
+.explore-coach[hidden] { display: none; }
+.explore-coach p { margin: 0 0 10px; line-height: 1.5; font-size: 13px; }
+.explore-coach div { display: flex; flex-wrap: wrap; gap: 8px; }
+.explore-coach button { min-height: 44px; white-space: normal; flex: 1; }
+
 /* Block Frenzy's menu: dark backing behind every line of text on the wood, so it reads. */
 #block-board .garage-head,
 #block-board .garage-col {
@@ -12216,25 +12435,12 @@ body.arcade-game .cloud-hopper-panel { z-index: 40; }
   color: #ffd27a !important;
 }
 
-/* Block Frenzy's controls list: grouped key and action rows on a dark backing. */
-/* With All controls open, the panel grows sideways and the list runs in columns, so it stays on screen. */
+/* Block Frenzy's controls list: whole groups in a grid that is three across when wide, two when middling and one when
+   narrow (by the list's own width), each group's rows aligned in two columns: key caps, then a short action. */
 @media (min-width: 900px) {
   #block-board:has(.block-controls[open]) {
     width: min(94vw, 1060px);
     max-width: min(94vw, 1060px);
-  }
-
-  #block-board .block-keys {
-    column-count: 3;
-    column-gap: 22px;
-  }
-
-  #block-board .block-keys h4 {
-    break-after: avoid;
-  }
-
-  #block-board .block-keys div {
-    break-inside: avoid;
   }
 }
 
@@ -12248,6 +12454,10 @@ body.arcade-game .cloud-hopper-panel { z-index: 40; }
 }
 
 .block-keys {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 10px 18px;
+  align-items: start;
   padding: 8px 10px;
   border-radius: 6px;
   background: rgba(18, 11, 6, 0.82);
@@ -12255,26 +12465,63 @@ body.arcade-game .cloud-hopper-panel { z-index: 40; }
   font-size: 12px;
 }
 
-.block-keys h4 {
-  margin: 8px 0 3px;
+.block-key-group {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 3px;
+  align-items: center;
+}
+
+.block-key-group h4 {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(255, 210, 122, 0.25);
   color: #ffd27a;
   font-size: 12px;
 }
 
-.block-keys h4:first-child {
-  margin-top: 0;
+.block-key-group div {
+  display: contents;
 }
 
-.block-keys div {
-  display: grid;
-  grid-template-columns: 112px 1fr;
-  gap: 6px;
-  padding: 1px 0;
+.block-key-group div > span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.block-keys kbd {
-  font: inherit;
+.block-key-caps {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.block-key-caps i {
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.block-keys kbd,
+.block-key-part kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 4px;
+  border: 1px solid rgba(255, 210, 122, 0.45);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
   color: #ffd27a;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.block-key-part {
+  white-space: nowrap;
 }
 
 .block-live { margin: 8px 0; }
@@ -12294,3 +12541,342 @@ body.arcade-game .cloud-hopper-panel { z-index: 40; }
 .block-board-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; color: #f4f4f0; }
 .block-board-mid small { font-size: clamp(13px, 1.5vw, 16px); }
 .block-board-mid small:last-child { font-size: clamp(18px, 2.2vw, 24px); font-variant-numeric: tabular-nums; }
+
+/* Clanktown's mirage (`poseMirage` in scene-block.js): inside the zone round the Mainframe, a pink-and-teal glitch tint,
+   slow scan lines and a warning ring at the screen's edge. Reduced motion and Low detail (`data-calm`) keep the tint
+   and the ring and drop the moving lines; nothing flashes. */
+.block-mirage {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    repeating-linear-gradient(0deg, rgba(56, 245, 224, 0.07) 0 2px, transparent 2px 6px),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 79, 216, 0.06) 40%, rgba(255, 79, 216, 0.22) 80%, rgba(56, 245, 224, 0.32) 100%);
+  box-shadow: inset 0 0 0 3px rgba(255, 79, 216, 0.55), inset 0 0 60px rgba(56, 245, 224, 0.35);
+  mix-blend-mode: screen;
+  animation: block-mirage-scan 4s linear infinite;
+}
+.block-mirage[hidden] { display: none; }
+.block-mirage[data-calm="true"] { animation: none; }
+@keyframes block-mirage-scan { from { background-position: 0 0, 0 0; } to { background-position: 0 24px, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .block-mirage { animation: none; } }
+
+/* Block Frenzy's multiplayer panel: the next step stands out, Leave doesn't; picks a match has set are muted. */
+.block-live-buttons button { padding: 8px 14px; border: 2px solid #c8791f; border-radius: 6px; background: #e8962e; color: #2b1b10; font: inherit; font-weight: 700; cursor: pointer; }
+.block-live-buttons button.is-leave, #block-live-wait, #block-live-watch { border-color: #6d5a44; background: transparent; color: #e9dfcf; font-weight: 400; }
+.block-side:disabled { opacity: 0.35; cursor: not-allowed; }
+/* Block Frenzy's trophy screen (`finish` in scene-block.js). The card is a frame round an open window: the scene's
+   camera frames the winners' 3D podium in `#block-trophy-stage`, so the wood boards sit above and below it and the cave
+   dims round the card. Cloud Hopper's results look: the gold pixel-block title, big glowing numbers, buttons coloured by
+   what they do. The winning side's colour comes from `data-team`. */
+#block-results.block-trophy {
+  --trophy: #3a8dff;
+  --trophy-light: #9cc8ff;
+  display: flex;
+  flex-direction: column;
+  width: min(760px, calc(100vw - 20px - var(--safe-left) - var(--safe-right)));
+  height: min(900px, calc(100dvh - 20px - var(--safe-top) - var(--safe-bottom)));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: 0 0 0 100vmax rgba(8, 6, 4, 0.42);
+  text-align: center;
+}
+#block-results.block-trophy[data-team="red"] { --trophy: #ff4a3a; --trophy-light: #ffb0a6; }
+#block-results.block-trophy[hidden] { display: none; }
+.block-trophy-head, .block-trophy-board {
+  position: relative;
+  border: 3px solid var(--wood-edge);
+  background: var(--planks);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.block-trophy-head { flex: none; padding: 10px 14px 8px; border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+.block-trophy-head .game-intro-kicker { margin: 0 0 4px; }
+.block-trophy-head .game-intro-title {
+  margin: 0;
+  color: #f5c542;
+  font-size: 46px;
+  filter: drop-shadow(0 3px 0 #7a3f0c) drop-shadow(0 3px 0 #4a2306) drop-shadow(0 0 16px rgba(255, 200, 60, 0.7));
+  animation: block-trophy-drop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
+}
+/* The open window: only its sides are wood, so the podium shows through between the boards. */
+.block-trophy-stage {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 150px;
+  border-left: 3px solid var(--wood-edge);
+  border-right: 3px solid var(--wood-edge);
+  /* A warm vignette over the view: the light reads as sunset gold and the sky darkens at the edges against either side. */
+  background: radial-gradient(ellipse at 50% 52%, transparent 30%, rgba(120, 48, 6, 0.35) 72%, rgba(60, 20, 4, 0.7) 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 216, 74, 0.35), inset 0 0 40px rgba(255, 200, 60, 0.25);
+  pointer-events: none;
+  overflow: hidden;
+}
+/* Gold sparkles twinkling over the podium: one layer of small dots, nothing repaints but its opacity. */
+.block-trophy-sparkles {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 14% 24%, #fff6c8 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 18%, #ffd84a 0 3px, transparent 4px),
+    radial-gradient(circle at 26% 70%, #ffd84a 0 2px, transparent 3px),
+    radial-gradient(circle at 72% 62%, #fff6c8 0 2px, transparent 3px),
+    radial-gradient(circle at 90% 44%, #ffe9a0 0 2px, transparent 3px),
+    radial-gradient(circle at 8% 52%, #ffe9a0 0 3px, transparent 4px);
+  animation: block-trophy-twinkle 1.6s ease-in-out infinite alternate;
+}
+.block-trophy-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  margin: 0;
+  padding: 6px 22px 7px;
+  border: 3px solid rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
+  background: linear-gradient(var(--trophy-light), var(--trophy) 55%);
+  color: #fff;
+  font-size: 26px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 0 22px var(--trophy);
+  transform: translateX(-50%) rotate(-2deg);
+  animation: block-trophy-pop 0.5s 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.5) both;
+}
+.block-trophy-board {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 14px 14px;
+  border-top: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  animation: block-trophy-rise 0.4s 0.1s ease-out both;
+}
+/* The score and the round's time share one row. */
+.block-trophy-tally { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
+.block-trophy-score { display: flex; align-items: baseline; justify-content: center; gap: 14px; margin: 0; line-height: 1; }
+.block-trophy-score i { color: var(--paper); font-size: 34px; font-style: normal; opacity: 0.7; }
+.block-final { font-size: 64px; font-variant-numeric: tabular-nums; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.55), 0 0 18px currentColor; }
+.block-final[data-team="blue"] { color: #58b4ff; }
+.block-final[data-team="red"] { color: #ff7a5c; }
+.block-trophy-time { margin: 4px 0 2px; color: #f5c542; font-size: 34px; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 200, 60, 0.45); }
+.block-trophy-board .help { margin: 0 0 8px; text-wrap: balance; }
+/* The two sides, styled as Cloud Hopper's shared top 10; the winners' panel lit in gold. */
+.block-trophy-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; text-align: left; }
+.block-side-panel { padding: 4px 8px 6px; border: 2px solid var(--stone-dk); border-radius: 9px 7px 10px 8px; background: var(--tablet); box-shadow: var(--tablet-shadow); }
+.block-side-panel.won { border-color: #f5c542; box-shadow: var(--tablet-shadow), 0 0 0 2px rgba(245, 197, 66, 0.35), 0 0 18px rgba(245, 197, 66, 0.35); }
+.block-side-panel h3, .block-side-panel li { display: grid; grid-template-columns: minmax(0, 1fr) 6ch 6ch 6ch 6ch; align-items: baseline; gap: 4px; }
+.block-side-panel h3 { margin: 2px 0 4px; font-size: 14px; }
+.block-side-panel[data-team="blue"] h3 span { color: #58b4ff; }
+.block-side-panel[data-team="red"] h3 span { color: #ff7a5c; }
+.block-side-panel.won h3 span::after { content: " ★"; color: #f5c542; }
+.block-side-panel h3 small { color: var(--muted); font-size: 10px; text-align: right; text-transform: uppercase; }
+.block-side-panel ol { margin: 0; padding: 0; list-style: none; }
+.block-side-panel li { padding: 3px 4px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 13px; }
+/* A long player name stays readable, including on touch where there is no title hover. */
+.block-side-panel li span { overflow-wrap: anywhere; }
+.block-side-panel li b { text-align: right; font-variant-numeric: tabular-nums; }
+.block-side-panel li.you { background: rgba(245, 197, 66, 0.16); border-radius: 4px; }
+.block-side-panel li.mvp span::before { content: "♛ "; color: #f5c542; }
+/* The highlights as medals. */
+.block-badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; text-align: left; }
+.block-badge { display: grid; grid-template-columns: 22px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 4px 8px; border: 2px solid rgba(0, 0, 0, 0.35); border-radius: 8px; background: rgba(0, 0, 0, 0.22); }
+.block-badge::before { content: ""; grid-row: 1 / 3; width: 18px; height: 18px; border: 2px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6c8, #f5c542 45%, #a8720f); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+.block-badge[data-medal="silver"]::before { background: radial-gradient(circle at 35% 30%, #ffffff, #c9ced6 45%, #7c8290); }
+.block-badge[data-medal="bronze"]::before { background: radial-gradient(circle at 35% 30%, #ffe1c2, #d0874a 45%, #7d4618); }
+.block-badge[data-medal="wood"]::before { border-radius: 4px; background: linear-gradient(#b98a52, #6f4a25); }
+.block-badge span { color: var(--accent-text); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.block-badge b { font-size: 13px; overflow-wrap: anywhere; }
+/* The buttons stay in view: if the board must scroll on a very short screen, they hold to its foot. */
+.block-trophy-board .actions { position: sticky; bottom: 0; z-index: 1; margin-top: 8px; padding-top: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--wood); box-shadow: 0 0 0 6px var(--wood); border-radius: 4px; }
+.block-trophy-board .actions button[data-role="go"] { background: linear-gradient(#ffe27a, #f0b62a); color: var(--ink); }
+.block-trophy-board .actions button[data-role="go"]:hover, .block-trophy-board .actions button[data-role="go"].virtual-hover { background: linear-gradient(#fff0a8, #ffe27a); }
+.block-trophy-board .actions button[data-role="choose"] { background: linear-gradient(#a6d97f, #5f9e3f); color: #13260b; }
+.block-trophy-board .actions button[data-role="choose"]:hover, .block-trophy-board .actions button[data-role="choose"].virtual-hover { background: linear-gradient(#c2e8a3, #a6d97f); }
+.block-trophy-board .actions button[data-role="leave"] { background: linear-gradient(#77706a, #4a4541); color: var(--paper); }
+.block-trophy-board .actions button[data-role="leave"]:hover, .block-trophy-board .actions button[data-role="leave"].virtual-hover { background: linear-gradient(#8a837c, #77706a); }
+@keyframes block-trophy-drop { from { transform: translateY(-60px) scale(1.25); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes block-trophy-pop { from { transform: translateX(-50%) rotate(-2deg) scale(0.2); opacity: 0; } to { transform: translateX(-50%) rotate(-2deg); opacity: 1; } }
+@keyframes block-trophy-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes block-trophy-twinkle { from { opacity: 0.25; } to { opacity: 1; } }
+/* Wide screens: the two sides run the card's width under the score, so names have room, and the medals run three
+   across under them, so the window keeps its height and nothing scrolls. */
+@media (min-width: 980px) and (min-height: 600px) {
+  #block-results.block-trophy { width: min(1000px, calc(100vw - 40px)); }
+  .block-trophy-board { padding-bottom: 10px; }
+  .block-final { font-size: 52px; }
+  .block-trophy-time { font-size: 30px; margin: 0; }
+  .block-trophy-board .help { margin-bottom: 6px; }
+  .block-badges { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 8px 0 0; }
+}
+/* Phones and short screens: smaller numbers and rows, so the card fits without scrolling where it can. */
+@media (max-width: 560px), (max-height: 700px) {
+  #block-results.block-trophy { height: calc(100dvh - 12px - var(--safe-top) - var(--safe-bottom)); }
+  .block-trophy-head { padding: 6px 10px 4px; }
+  .block-trophy-head .game-intro-title { font-size: 32px; }
+  .block-trophy-stage { min-height: 120px; }
+  .block-trophy-tally { gap: 16px; }
+  .block-trophy-banner { font-size: 18px; padding: 4px 14px 5px; }
+  .block-trophy-board { padding: 6px 8px 10px; }
+  .block-final { font-size: 44px; }
+  .block-trophy-score i { font-size: 24px; }
+  .block-trophy-time { font-size: 24px; margin: 2px 0; }
+  .block-trophy-board .help { font-size: 11px; margin-bottom: 6px; }
+  .block-trophy-sides { gap: 6px; }
+  .block-side-panel { padding: 3px 5px 4px; }
+  .block-side-panel h3, .block-side-panel li { grid-template-columns: minmax(0, 1fr) 4.5ch 3.5ch 3.5ch 3.5ch; gap: 2px; }
+  .block-side-panel h3 small { font-size: 8px; }
+  .block-side-panel li { font-size: 10.5px; padding: 2px; }
+  .block-badges { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-top: 6px; }
+  .block-badge { grid-template-columns: 14px minmax(0, 1fr); column-gap: 5px; padding: 3px 5px; }
+  .block-badge::before { width: 12px; height: 12px; }
+  .block-badge span { font-size: 8px; }
+  .block-badge b { font-size: 11px; }
+  .block-trophy-board .actions { margin-top: 8px; gap: 6px; }
+  .block-trophy-board .actions button { min-height: 38px; padding: 4px; font-size: 12px; }
+}
+@media (max-width: 560px) {
+  .block-trophy-sides { grid-template-columns: 1fr; }
+  .block-trophy-board .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .block-trophy-board .actions button[data-role="leave"] { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .block-trophy-head .game-intro-title, .block-trophy-banner, .block-trophy-board, .block-trophy-sparkles { animation: none; }
+}
+
+/* Directory text and links only: no external world is loaded to browse its entry. */
+.cave-directory { width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom)); overflow-y: auto; overscroll-behavior: contain; }
+.cave-directory p { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.cave-directory h3 { font-size: 14px; margin: 20px 0 8px; color: var(--gold, #ffd84a); }
+.cave-directory ul { padding: 0; list-style: none; }
+.cave-directory li { padding: 12px 0; border-top: 1px solid #f3efe424; }
+.cave-directory-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.cave-directory-actions :is(button, a) { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; border: 1px solid var(--wood-edge); border-radius: 6px; background: var(--slab-dark); color: #f3efe4; font: inherit; font-size: 12px; cursor: pointer; }
+.cave-directory-actions :is(button, a):focus-visible { outline: 3px solid #ffd84a; outline-offset: 2px; }
+
+.cave-directory .modal-close { width: 44px; height: 44px; }
+
+body[data-active-scene] #cave-directory-button { min-height: 44px; }
+
+/* Duels (duel.js): the target, a challenge heard and the duel's bars, at the top left under the banner (the top centre
+   is the movement coaching card's and the walking directions'). */
+.duel-target, .duel-invite, .duel-hud {
+  position: fixed;
+  left: calc(16px + var(--safe-left));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px - var(--safe-left));
+  padding: 8px 10px;
+  color: var(--paper);
+  background: rgba(22, 20, 18, 0.88);
+  border: 2px solid var(--wood-edge);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+.duel-target { top: calc(76px + var(--safe-top)); }
+.duel-invite { top: calc(128px + var(--safe-top)); width: min(320px, calc(100vw - 32px)); flex-wrap: wrap; justify-content: center; }
+.duel-hud { top: calc(76px + var(--safe-top)); flex-direction: column; align-items: stretch; gap: 6px; }
+.duel-yield { align-self: center; }
+.duel-target[hidden], .duel-invite[hidden], .duel-hud[hidden], .duel-note[hidden] { display: none; }
+.duel-target-name { font-weight: 700; overflow-wrap: anywhere; }
+.duel-invite-text { flex-basis: 100%; margin: 0; text-align: center; font-weight: 700; }
+.duel-button, .duel-yield {
+  padding: 6px 12px;
+  color: var(--ink);
+  background: var(--accent);
+  border: 2px solid var(--wood-edge);
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.duel-button:disabled { opacity: 0.6; cursor: default; }
+.duel-decline, .duel-yield { color: var(--paper); background: var(--stone-lt); }
+.duel-yield { padding: 3px 10px; font-size: 11px; }
+.duel-close {
+  width: 28px;
+  height: 28px;
+  color: var(--paper);
+  background: none;
+  border: 0;
+  font-size: 18px;
+  cursor: pointer;
+}
+/* The panel: its title and the time left, then a row a duelist (name, bar, health, metres from the flag), one over
+   the other in shared columns. */
+.duel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.duel-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
+.duel-rows { display: grid; grid-template-columns: minmax(0, auto) auto 3ch 5ch; gap: 6px 8px; align-items: center; }
+.duel-side { display: contents; }
+.duel-name { max-width: 14ch; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.duel-far { font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; opacity: 0.85; }
+.duel-far[data-out="true"] { color: var(--danger); font-weight: 700; opacity: 1; }
+.duel-bar { position: relative; display: block; width: min(140px, 28vw); height: 8px; background: rgba(0, 0, 0, 0.5); border-radius: 4px; overflow: hidden; }
+/* Green, amber under half and orange under a quarter, as the bars over the duelists' heads; what a blow just took stays
+   red behind the bar a beat (the chip follows the same width late). */
+.duel-fill { position: relative; display: block; width: 100%; height: 100%; background: #4ade80; transition: width 0.15s; }
+.duel-fill[data-level="mid"] { background: #f2c94c; }
+.duel-fill[data-level="low"] { background: #ff9a3d; }
+.duel-chip { position: absolute; inset: 0 auto 0 0; width: 100%; background: #e0261b; transition: width 0.7s ease-out 0.35s; }
+.duel-hp { font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; }
+.duel-clock { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.duel-clock[data-low="true"] { color: var(--danger); }
+.duel-note { margin: 0; color: var(--danger); font-weight: 700; }
+/* A blow taken: the view's edge flashes red (duel.js fades it). */
+.duel-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(200, 16, 16, 0) 42%, rgba(200, 16, 16, 0.5) 78%, rgba(170, 8, 8, 0.85) 100%);
+}
+/* The count before the first blow and how the duel ended, large over the middle of the view. */
+.duel-count, .duel-result {
+  position: fixed;
+  left: 50%;
+  top: 21%;
+  z-index: 31;
+  margin: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  white-space: nowrap;
+}
+.duel-count, .duel-result-title {
+  font-weight: 900;
+  line-height: 1;
+  color: #ffe27a;
+  text-shadow: 0 5px 0 #24100e, -3px 0 0 #24100e, 3px 0 0 #24100e, 0 -3px 0 #24100e, 0 0 26px rgba(0, 0, 0, 0.75);
+}
+.duel-count { font-size: clamp(84px, 20vw, 200px); }
+.duel-count[data-go="true"] { font-size: clamp(56px, 13vw, 140px); color: #ff6a4d; }
+.duel-result { display: grid; justify-items: center; gap: 12px; }
+.duel-result-title { font-size: clamp(46px, 11vw, 128px); letter-spacing: 0.04em; }
+.duel-result[data-result="lost"] .duel-result-title { color: #ff5a4d; }
+.duel-result[data-result="draw"] .duel-result-title, .duel-result[data-result="over"] .duel-result-title { color: var(--paper); }
+.duel-result-line {
+  max-width: calc(100vw - 32px);
+  padding: 6px 14px;
+  color: var(--paper);
+  background: rgba(22, 20, 18, 0.88);
+  border: 2px solid var(--wood-edge);
+  border-radius: var(--radius);
+  font-size: clamp(13px, 2.4vw, 20px);
+  font-weight: 700;
+  white-space: normal;
+}
+.duel-flash[hidden], .duel-count[hidden], .duel-result[hidden] { display: none; }
+.players-duel { grid-column: 1 / -1; justify-self: start; margin-top: 6px; }
+.players-duel[hidden] { display: none; }
+/* On a narrow screen the movement coaching card spans the top: the duel's cards stand below it while it shows. */
+@media (max-width: 760px) {
+  body:has(#explore-coach:not([hidden])) .duel-target,
+  body:has(#explore-coach:not([hidden])) .duel-hud { top: calc(172px + var(--safe-top)); }
+  body:has(#explore-coach:not([hidden])) .duel-invite { top: calc(224px + var(--safe-top)); }
+}

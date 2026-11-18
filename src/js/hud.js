@@ -4,16 +4,11 @@
   const { iconRenderer: iconRendererMod } = BL;
   const { formatLarge } = BL.game;
   const { createNode, addChild, createCamera, boundsOf } = BL.scene;
-  const STATE_LABELS = { working: "clank", chilling: "chill", sleeping: "sleep", away: "away", online: "online" };
-  const ROSTER_ORDER = { working: 0, chilling: 1, sleeping: 2, away: 3 };
+  // Contributing Oogas is roster-panel.js's, shared with the Ooga Chat app: its rows, their order (this browser's Sorted
+  // by choice, `ooga-roster-sort`), Show away and the stats strip. This file hands it the island's contributors and their
+  // faces, and keeps the presence, host and voice marks on its rows.
+  const { STATE_LABELS } = BL.rosterPanel;
   const stampOf = (contributor) => contributor.lastContributionAt || contributor.lastCommitAt;
-  // How Contributing Oogas are ordered: "recent", by activity and then the latest contribution, or "most", by the
-  // contributions in the newest oogatron reading with the away Oogas still behind their button. This browser's choice.
-  const ROSTER_SORT_KEY = "ooga-roster-sort";
-  let rosterSort = "recent";
-  try { if (localStorage.getItem(ROSTER_SORT_KEY) === "most") rosterSort = "most"; } catch { /* Storage may be unavailable. */ }
-  const rosterRank = (state) => rosterSort === "recent" || state === "away" ? ROSTER_ORDER[state] : 0;
-  const rosterKey = (contributor) => rosterSort === "most" ? contributionsOf(contributor) : stampOf(contributor);
   // Local control is online only while signed in; remote presence remains independent. An NPC ghost track
   // (npc-ghosts.js) shows its own activity (a gorilla its Ooga's), never online: the player driving that character
   // is a separate body, which carries the online dot itself.
@@ -24,11 +19,6 @@
     return online ? "online" : actor.state === "away" ? "chilling" : actor.state;
   };
   const $ = (id) => document.getElementById(id);
-  const TIER_RANK = { legendary: 0, epic: 1, rare: 2, common: 3 };
-  const BANANA_COUNT = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
-  const DONATED_COUNT = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const DONOR_BANANAS = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  let donorUnit = "bananas";
   let donationStats = null, liveDonors = null;
   const setDonationStats = (stats) => {
     donationStats = stats;
@@ -47,8 +37,7 @@
     const price = currentDonationRate()?.usdPerBtc;
     if (!donatedValueText || sats !== valuedSats || price !== valuedPrice) {
       valuedSats = sats; valuedPrice = price;
-      donatedValueText = sats === 0 ? DONATED_COUNT.format(0) : sats !== null && price
-        ? DONATED_COUNT.format(sats / 1e8 * price) : "—";
+      donatedValueText = BL.bananaPanel.valueText(sats, price);
     }
     return donatedValueText;
   };
@@ -119,96 +108,13 @@
         lastWidth: Number.isFinite(state.lastWidth) && state.lastWidth > 0 ? state.lastWidth : 440 };
     } catch { return null; }
   };
-  // Sign headings: one pixel path per element, scaled by that element's CSS height.
-  const SIGN_NS = "http://www.w3.org/2000/svg";
-  // Collapse whitespace: markup may wrap a sign across lines but the lettering needs one run of words.
-  const signText = (raw) => raw.replace(/\s+/g, " ").trim();
-  const signLettering = (raw) => {
-    const { SIGN_GLYPHS } = BL.hubModels;
-    const text = signText(raw);
-    let cells = -1;
-    for (const ch of text) cells += ch === " " ? 2 : 4;
-    const svg = document.createElementNS(SIGN_NS, "svg");
-    svg.setAttribute("viewBox", `0 0 ${cells} 6`);
-    svg.setAttribute("class", "sign");
-    svg.setAttribute("aria-hidden", "true");
-    const path = document.createElementNS(SIGN_NS, "path");
-    let d = "", cursor = 0;
-    for (const ch of text) {
-      if (ch === " ") {
-        cursor += 2;
-        continue;
-      }
-      const glyph = SIGN_GLYPHS[ch];
-      if (!glyph) throw new Error(`No cave-sign glyph for "${ch}"`);
-      for (let row = 0; row < glyph.length; row++) {
-        for (let col = 0; col < glyph[row].length; col++) {
-          if (glyph[row][col] === "1") d += `M${cursor + col} ${row}h.82v.82h-.82z`;
-        }
-      }
-      cursor += 4;
-    }
-    path.setAttribute("d", d);
-    path.setAttribute("fill", "currentColor");
-    svg.append(path);
-    return svg;
-  };
-  // Letters a sign; a scene calls it again when a sign's words change (a drop that was lost, not landed).
-  const letterSign = (el, words = el.textContent) => {
-    const text = signText(words);
-    el.setAttribute("aria-label", text);
-    el.replaceChildren(signLettering(text));
-  };
+  // Sign headings and the panel tabs' icons: sign-glyphs.js and native-icons.js draw them, shared with the Ooga Chat
+  // app. The tabs fill before sheet.js copies them for its windows.
+  const { lettering: signLettering, letter: letterSign } = BL.signGlyphs;
   for (const el of document.querySelectorAll("[data-sign]")) letterSign(el);
-  // The roster's voice mark, a 9x9 pixel speaker; the stylesheet shows the parts each state needs.
-  const VOICE_PARTS = [
-    ["voice-speaker", "M0 3h2v3H0zM2 2h1v5H2zM3 1h1v7H3z"],
-    ["voice-near", "M5 3h1v3H5z"],
-    ["voice-far", "M7 2h1v5H7z"],
-    ["voice-cross", "M5 3h1v1H5zM7 3h1v1H7zM6 4h1v1H6zM5 5h1v1H5zM7 5h1v1H7z"],
-    ["voice-slash", "M0 0h1v1H0zM1 1h1v1H1zM2 2h1v1H2zM3 3h1v1H3zM4 4h1v1H4zM5 5h1v1H5zM6 6h1v1H6zM7 7h1v1H7zM8 8h1v1H8z"],
-  ];
-  const voiceIcon = document.createElementNS(SIGN_NS, "svg");
-  voiceIcon.setAttribute("viewBox", "0 0 9 9");
-  voiceIcon.setAttribute("aria-hidden", "true");
-  for (const [part, d] of VOICE_PARTS) {
-    const path = document.createElementNS(SIGN_NS, "path");
-    path.setAttribute("class", part);
-    path.setAttribute("d", d);
-    path.setAttribute("fill", "currentColor");
-    voiceIcon.append(path);
-  }
-  // The Bananas panel's banana (its glyph is in the panel's markup) before each amount its two lists show: every row
-  // clones it, and the stylesheet hides it while the lists count sats.
-  const amountBanana = document.createElementNS(SIGN_NS, "svg");
-  amountBanana.setAttribute("viewBox", "0 0 9 9");
-  amountBanana.setAttribute("shape-rendering", "crispEdges");
-  amountBanana.setAttribute("aria-hidden", "true");
-  amountBanana.setAttribute("class", "banana-amount-icon");
-  {
-    const use = document.createElementNS(SIGN_NS, "use");
-    use.setAttribute("href", "#banana-panel-glyph");
-    amountBanana.append(use);
-  }
-  // The recent list's orange check: a seal whose rim rises and falls in eight rounded ridges, a ridge at the top,
-  // with the tick over it. Every row clones it.
-  const verifiedSeal = document.createElementNS(SIGN_NS, "svg");
-  verifiedSeal.setAttribute("viewBox", "0 0 24 24");
-  verifiedSeal.setAttribute("aria-hidden", "true");
-  {
-    const RIDGES = 8, STEPS = RIDGES * 8;
-    let d = "";
-    for (let i = 0; i < STEPS; i++) {
-      const a = i / STEPS * Math.PI * 2, r = 11 + 0.9 * Math.cos(RIDGES * a);
-      d += `${i ? "L" : "M"}${(12 + r * Math.sin(a)).toFixed(2)} ${(12 - r * Math.cos(a)).toFixed(2)}`;
-    }
-    const seal = document.createElementNS(SIGN_NS, "path"), tick = document.createElementNS(SIGN_NS, "path");
-    seal.setAttribute("class", "banana-verified-seal");
-    seal.setAttribute("d", `${d}Z`);
-    tick.setAttribute("class", "banana-verified-tick");
-    tick.setAttribute("d", "M7.6 12.4L10.9 17.1L16.9 8.3");
-    verifiedSeal.append(seal, tick);
-  }
+  BL.nativeIcons.fill(document);
+  // The roster's voice mark, a 9x9 pixel speaker shared with Ooga Chat; the stylesheet shows the parts each state needs.
+  const voiceIcon = BL.nativeIcons.voice();
   // Icons are rasterized once into an offscreen canvas.
   const ICON_PX = 48;
   const renderIcon = (item) => {
@@ -296,27 +202,18 @@
     renderer.render(root, camera);
     renderer.dispose();
   };
-  // The sheet belongs to the page. Reuse attached rows across visits; only current roster names stay in this map.
-  const rosterNodes = new Map();
-  let rosterAway = null, donorRows = null, donationRows = null;
-  const create = ({ roster, catalog, tierColors, renderIcon, lootEnabled = false, healthEnabled = false, signal = null, escapeHeld = null }) => {
+  const create = ({ roster, healthEnabled = false, signal = null, escapeHeld = null }) => {
     const lifetime = signal ? null : new AbortController();
     signal = signal || lifetime.signal;
+    // The Bananas panel's markup (banana-panel.js, shared with the Ooga Chat app): built and lettered on the first visit,
+    // then kept for the page life, before the panel's actions are gathered.
+    if (!$("bananas-panel").firstChild) for (const sign of BL.bananaPanel.build($("bananas-panel"), { ids: true }).querySelectorAll("[data-sign]")) letterSign(sign);
+    // So too the title, Sorted by and list of Contributing Oogas (roster-panel.js), before the sheet's bells join the titles.
+    if (!$("roster-panel").querySelector("[data-roster]")) for (const sign of BL.rosterPanel.build($("roster-panel"), { ids: true }).querySelectorAll("[data-sign]:not([aria-label])")) letterSign(sign);
     const el = {
-      roster: $("roster"), rosterCount: $("roster-count"), rosterSort: $("roster-sort"),
-      statDonations: $("stat-donations"),
-      statSats: $("stat-sats"),
-      bananaTotal: $("banana-total"), bananaSource: $("banana-source"),
-      bananaLeaders: $("banana-leaders"), bananaEmpty: $("banana-empty"),
-      bananaRecent: $("banana-recent-list"), bananaRecentEmpty: $("banana-recent-empty"),
-      bananaRecentBar: $("banana-recent-bar"), bananaRecentBarLabel: $("banana-recent-bar-label"),
+      rosterPanel: $("roster-panel"),
       donationMessageLabel: $("donation-message-label"),
-      bananaBoardUnit: $("banana-board-unit"), bananaBoardNote: $("banana-board-note"),
-      bananaPanel: $("bananas-panel"), bananaBtcRate: $("banana-btc-rate"),
-      bananaBtcSats: $("banana-btc-sats"), bananaBtcPrice: $("banana-btc-price"), bananaExchange: $("banana-exchange"),
-      donorUnits: [...document.querySelectorAll("[data-donor-unit]")],
-      lootTab: $("loot-tab"),
-      worldLootHint: $("world-loot-hint"),
+      bananaPanel: $("bananas-panel"),
       subtitle: $("subtitle"),
       topbar: document.querySelector(".topbar"), brand: document.querySelector(".brand"),
       clock: $("world-clock"), block: $("world-block"),
@@ -369,8 +266,6 @@
       hint: $("hint"),
       sheet: $("sheet"),
       presets: [...document.querySelectorAll("[data-preset]")],
-      inventory: $("inventory"),
-      inventoryEmpty: $("inventory-empty"),
       recipe: $("recipe"),
       recipeText: $("recipe-text")
     };
@@ -392,9 +287,7 @@
       el.modeFree.src = canvas.toDataURL("image/png");
     };
     favicon.src = document.querySelector('link[rel="icon"][sizes="64x64"]').href;
-    el.lootTab.hidden = !lootEnabled;
-    el.worldLootHint.hidden = !lootEnabled;
-    const sheet = BL.sheet.create({ lootEnabled, signal });
+    const sheet = BL.sheet.create({ signal });
     sheet.setPlaying(document.body.classList.contains("arcade-game"));
     el.primary.hidden = true;
     el.gorillaSmash.hidden = true;
@@ -429,6 +322,8 @@
       const fitBanner = () => {
         bannerFrame = 0;
         if (document.body.dataset.activeScene !== bannerScene) return;
+        // The Sign in button's room, set before the clock is measured: the clock stands clear of it.
+        bannerStyle(el.topbar, "--hub-banner-account", `${accountTop().offsetWidth ? accountTop().offsetWidth + 8 : 0}px`);
         const brand = el.brand.getBoundingClientRect(), clock = el.clock.getBoundingClientRect(), block = el.block.getBoundingClientRect();
         const topbar = getComputedStyle(el.topbar), row = getComputedStyle(el.equipmentRow);
         const fontSize = parseFloat(getComputedStyle(el.clock).fontSize) || 22;
@@ -480,6 +375,7 @@
           const presetTop = banner === "below" ? top + equipmentHeight + (count ? 8 : 0) : (topEdge + bottomEdge - 28) / 2;
           const equipmentWidth = (compactWidth + (banner === "full" && expanded ? 140 : 0)) * scale;
           const presetLeft = banner === "below" ? belowLeft : leftEdge + equipmentWidth + (count ? 12 : 0);
+          bannerStyle(presets, "--banner-equipment-right", `${el.equipmentRow.getBoundingClientRect().left + equipmentWidth + 8}px`);
           bannerStyle(presets, "--banner-presets-top", `${presetTop}px`);
           bannerStyle(presets, "--banner-presets-left", `${presetLeft}px`);
           bannerStyle(presets, "--banner-presets-width", `${Math.max(0, window.innerWidth - presetLeft - paddingRight)}px`);
@@ -496,7 +392,7 @@
       };
       const bannerResize = new ResizeObserver(scheduleBanner), bannerEquipment = new MutationObserver(scheduleBanner);
       // Cabinet zooms resize the stage without changing the viewport or the title's own size.
-      for (const node of [el.topbar, el.brand, el.clock, el.block, el.equipmentRow]) bannerResize.observe(node);
+      for (const node of [el.topbar, el.brand, el.clock, el.block, el.equipmentRow, accountTop()]) bannerResize.observe(node);
       if (presets) {
         bannerResize.observe(presets);
         bannerEquipment.observe(presets, { attributes: true, subtree: true, childList: true, characterData: true, attributeFilter: ["hidden", "disabled"] });
@@ -509,185 +405,41 @@
         bannerResize.disconnect();
         bannerEquipment.disconnect();
         window.cancelAnimationFrame(bannerFrame);
-        if (presets) for (const property of ["--banner-presets-top", "--banner-presets-left", "--banner-presets-width"]) presets.style.removeProperty(property);
+        if (presets) for (const property of ["--banner-presets-top", "--banner-presets-left", "--banner-presets-width", "--banner-equipment-right"]) presets.style.removeProperty(property);
         delete el.equipment.dataset.banner;
         for (const property of ["--hub-equipment-scale", "--hub-equipment-left", "--hub-equipment-top", "--hub-equipment-width"]) el.equipment.style.removeProperty(property);
         el.messageStack.style.removeProperty("--hub-equipment-bottom");
         el.micNote.style.removeProperty("--hub-equipment-bottom");
         document.body.style.removeProperty("--banner-controls-bottom");
-        for (const property of ["--hub-banner-button", "--hub-banner-button-top", "--hub-banner-button-right", "--hub-banner-button-gap"]) el.topbar.style.removeProperty(property);
+        for (const property of ["--hub-banner-button", "--hub-banner-button-top", "--hub-banner-button-right", "--hub-banner-button-gap", "--hub-banner-account"]) el.topbar.style.removeProperty(property);
       });
       scheduleBanner();
     }
     let hintTimer = 0, hintHideTimer = 0, copyTimer = 0;
-    const rosterRows = new Map();
-    let showAway = false, awayCount = 0, awayShownCount = -1, awayShownShow = null;
-    if (!rosterAway) {
-      const li = document.createElement("li"), button = document.createElement("button");
-      li.className = "roster-away"; button.type = "button"; li.append(button);
-      rosterAway = { li, button };
-    }
-    const awayRow = rosterAway.li, awayButton = rosterAway.button;
-    awayButton.setAttribute("aria-expanded", "false");
-    awayRow.remove();
-    const names = new Set(roster.map(contributor => contributor.name));
-    for (const [name, row] of rosterNodes) if (!names.has(name)) { row.li.remove(); rosterNodes.delete(name); }
-    // countAway rescans on every roster state flip and online toggle; skip the writes until they change.
-    el.rosterCount.textContent = `${roster.length} Oogas`;
-    const updateAwayButton = () => {
-      if (awayCount === awayShownCount && showAway === awayShownShow) return;
-      awayShownCount = awayCount;
-      awayShownShow = showAway;
-      awayRow.hidden = awayCount === 0;
-      awayButton.textContent = `${showAway ? "Hide" : "Show"} away (${awayCount})`;
+    // Contributing Oogas (roster-panel.js, shared with the Ooga Chat app), its rows kept for the page life. The island
+    // hands it its contributors, their contribution state and age (contributors.js), their faces from this page's own
+    // renderer and the presence the scene reports.
+    const onCloud = (name) => {
+      for (const c of BL.net.state.clouds) if (c.character === name) return true;
+      return false;
     };
-    const orderedRoster = [...roster].sort((a, b) =>
-      rosterRank(BL.contributors.contributionStateFor(a)) - rosterRank(BL.contributors.contributionStateFor(b)) ||
-      rosterKey(b) - rosterKey(a) || stampOf(b) - stampOf(a));
-    for (let rosterIndex = 0; rosterIndex < orderedRoster.length; rosterIndex++) {
-      const contributor = orderedRoster[rosterIndex];
-      let nodes = rosterNodes.get(contributor.name);
-      if (!nodes) {
-        const li = document.createElement("li"), dots = document.createElement("span"), presence = document.createElement("span"), name = document.createElement("button");
-        li.dataset.name = contributor.name;
-        // The online dot, with the host's outlined dot centred behind it.
-        dots.className = "roster-dots";
-        presence.className = "roster-presence"; presence.setAttribute("role", "img");
-        const label = document.createElement("span"), host = document.createElement("span");
-        host.className = "roster-host";
-        host.setAttribute("role", "img"); host.setAttribute("aria-label", "Host: runs the Oogas for everyone");
-        host.title = "Host: runs the Oogas for everyone";
-        dots.append(presence, host);
-        // The name, on one line and cut short with an ellipsis, opens the row onto the contributor's stats.
-        name.className = "roster-name"; name.type = "button"; label.className = "roster-label";
-        name.append(label);
-        const marks = document.createElement("span"), voice = document.createElement("button");
-        marks.className = "roster-marks";
-        voice.className = "roster-voice"; voice.type = "button"; voice.append(voiceIcon.cloneNode(true));
-        marks.append(voice);
-        const age = document.createElement("span"), state = document.createElement("span");
-        age.className = "roster-age"; age.append(""); state.className = "roster-state"; state.append("");
-        li.append(dots, name, marks, age, state);
-        nodes = { li, presence, name, label, host, voice, age, state, stats: null };
-        rosterNodes.set(contributor.name, nodes);
-      }
-      const { li, presence, name, label, host, voice, age, state } = nodes;
-      if (label.textContent !== contributor.display) { label.textContent = contributor.display; label.title = contributor.display; }
-      presence.dataset.online = "false"; presence.setAttribute("aria-label", "Offline"); presence.title = "Offline";
-      host.hidden = voice.hidden = true; voice.disabled = false;
-      if (nodes.stats) nodes.stats.box.hidden = true;
-      name.setAttribute("aria-expanded", "false");
-      voice.dataset.voice = voice.dataset.login = ""; voice.dataset.self = "false";
-      const activity = BL.contributors.contributionStateFor(contributor), ageText = BL.contributors.contributionAgeLabel(contributor);
-      if (age.firstChild.data !== ageText) age.firstChild.data = ageText;
-      state.dataset.state = activity;
-      if (state.firstChild.data !== STATE_LABELS[activity]) state.firstChild.data = STATE_LABELS[activity];
-      li.hidden = activity === "away";
-      if (activity === "away") { if (!awayRow.parentElement) el.roster.append(awayRow); awayCount++; }
-      el.roster.append(li);
-      rosterRows.set(contributor.name, { li, presence, state, age, contributor, rosterIndex, online: false, sceneOnline: false, remoteOnline: false, netOnline: false, nextOnline: false, placedStamp: stampOf(contributor), host, voice, look: "", login: "", hostOn: false, blocked: false, self: false, nextLook: "", nextLogin: "", nextHost: false, nextSelf: false, name, nodes, open: false });
-    }
-    if (!awayRow.parentElement) el.roster.append(awayRow);
-    updateAwayButton();
-    on(el.roster, "click", (e) => {
-      const who = e.target.closest(".roster-name");
-      if (who) {
-        who.blur();
-        const row = rosterRows.get(who.parentElement.dataset.name);
-        if (row) openStats(row, !row.open);
-        return;
-      }
-      const button = e.target.closest(".roster-voice");
-      if (!button || button.disabled) return;
-      button.blur();
+    const rosterPanel = BL.rosterPanel.create(el.rosterPanel, {
+      roster, stamp: stampOf, login: (contributor) => loginOf(contributor), joinedAt: (contributor) => joinedAt(contributor, BL.characters.get(contributor.name)),
+      stateFor: (contributor) => BL.contributors.contributionStateFor(contributor), ageLabel: (contributor) => BL.contributors.contributionAgeLabel(contributor),
+      stats: () => liveStats || BL.jumbotronData, face: faceOf,
+      // A scene's local driver needs a signed-in account; remote drivers and the room's signed-in identities remain
+      // online independently.
+      // An Ooga Chat speaker on a cloud (`net.state.clouds`) wears Ooga Chat's purple dot, as their row in Online Oogas does.
+      online: (row) => onCloud(row.contributor.name) ? "cloud" : row.sceneOnline && !!BL.net.state.me || row.remoteOnline || row.netOnline,
       // The visitor's own mark mutes and unmutes their microphone; anyone else's mutes them for this visitor.
-      if (button.dataset.self === "true") BL.voice.toggle();
-      else BL.voice.muteLocal(button.dataset.login, button.getAttribute("aria-pressed") !== "true");
-    });
-    on(awayButton, "click", () => {
-      showAway = !showAway;
-      awayButton.setAttribute("aria-expanded", String(showAway));
-      for (const row of rosterRows.values()) if (row.state.dataset.state === "away") row.li.hidden = !showAway && !row.online;
-      updateAwayButton();
-    });
-    // The Sorted by choice orders the roster; online presence never changes a row's rank.
-    const rankOf = (row) => rosterRank(row.state.dataset.state);
-    const countAway = () => {
-      awayCount = 0;
-      for (const row of rosterRows.values()) if (!row.online && row.state.dataset.state === "away") awayCount++;
-      updateAwayButton();
-    };
-    const placeRosterRow = (row) => {
-      const rank = rankOf(row), stamp = rosterKey(row.contributor);
-      let before = rank === ROSTER_ORDER.away ? null : awayRow;
-      for (const sibling of el.roster.children) {
-        if (sibling === row.li || sibling === awayRow) continue;
-        const other = rosterRows.get(sibling.dataset.name);
-        const otherRank = rankOf(other), otherStamp = rosterKey(other.contributor);
-        if (otherRank > rank) { before = otherRank === ROSTER_ORDER.away ? awayRow : sibling; break; }
-        if (otherRank === rank && (otherStamp < stamp || otherStamp === stamp && other.rosterIndex > row.rosterIndex)) { before = sibling; break; }
+      voice: (button) => {
+        if (button.dataset.self === "true") BL.voice.toggle();
+        else BL.voice.muteLocal(button.dataset.login, button.getAttribute("aria-pressed") !== "true");
       }
-      if (before) {
-        if (row.li.nextElementSibling !== before) el.roster.insertBefore(row.li, before);
-      } else if (el.roster.lastElementChild !== row.li) el.roster.append(row.li);
-    };
-    // Every row in the chosen order, the away rows behind their button, moving only what is out of place.
-    const sortRoster = () => {
-      const rows = [...rosterRows.values()].sort((a, b) => rankOf(a) - rankOf(b) || rosterKey(b.contributor) - rosterKey(a.contributor) || stampOf(b.contributor) - stampOf(a.contributor));
-      let at = el.roster.firstElementChild, awayPlaced = false;
-      const place = (li) => { if (li === at) at = at.nextElementSibling; else el.roster.insertBefore(li, at); };
-      rows.forEach((row, index) => {
-        row.rosterIndex = index;
-        if (!awayPlaced && rankOf(row) === ROSTER_ORDER.away) { place(awayRow); awayPlaced = true; }
-        place(row.li);
-      });
-      if (!awayPlaced) place(awayRow);
-    };
-    el.rosterSort.value = rosterSort;
-    on(el.rosterSort, "change", () => {
-      rosterSort = el.rosterSort.value === "most" ? "most" : "recent";
-      try { localStorage.setItem(ROSTER_SORT_KEY, rosterSort); } catch { /* Storage may be unavailable. */ }
-      el.rosterSort.blur();
-      sortRoster();
     });
-    // A scene's local driver needs a signed-in account; remote drivers and the room's
-    // signed-in identities remain online independently. A change repaints the dot without moving the row.
-    const showOnline = (row) => {
-      const online = row.sceneOnline && !!BL.net.state.me || row.remoteOnline || row.netOnline;
-      if (row.online === online) return;
-      row.online = online;
-      row.presence.dataset.online = online ? "true" : "false";
-      row.presence.title = online ? "Online" : "Offline";
-      row.presence.setAttribute("aria-label", row.presence.title);
-      row.li.hidden = row.state.dataset.state === "away" && !showAway && !online;
-      countAway();
-    };
-    const setRosterRow = (name, _stateKey, _ageText, online = false, remoteOnline = false) => {
-      const row = rosterRows.get(name);
-      if (!row) return;
-      // Gameplay can put an Ooga to work or sleep; this board follows the
-      // contributor's latest recorded activity instead.
-      const activity = BL.contributors.contributionStateFor(row.contributor);
-      const ageText = BL.contributors.contributionAgeLabel(row.contributor);
-      let moved = false;
-      if (row.state.dataset.state !== activity) {
-        row.state.dataset.state = activity;
-        row.state.firstChild.data = STATE_LABELS[activity] || activity;
-        row.li.hidden = activity === "away" && !showAway && !row.online;
-        countAway();
-        moved = true;
-      }
-      if (row.age.firstChild.data !== ageText) row.age.firstChild.data = ageText;
-      row.sceneOnline = online;
-      row.remoteOnline = remoteOnline;
-      showOnline(row);
-      const stamp = stampOf(row.contributor);
-      if (row.placedStamp !== stamp) {
-        row.placedStamp = stamp;
-        moved = true;
-      }
-      if (moved) placeRosterRow(row);
-    };
+    const rosterRows = rosterPanel.rows, setRosterRow = rosterPanel.setRow, showOnline = rosterPanel.showOnline;
+    listeners.push(() => rosterPanel.dispose());
+    listeners.push(BL.net.subscribeClouds(() => { for (const row of rosterRows.values()) showOnline(row); }));
     // Contribution data and its age stay live even in rooms with only one local Ooga.
     // Preserve the scene's presence flags when refreshing activity across the whole panel.
     const refreshRosterActivity = () => {
@@ -704,55 +456,20 @@
     listeners.push(BL.oogatronLive.subscribe((event) => {
       if (event.type !== "stats") return;
       liveStats = BL.activityRepos.normalizeStats(event.stats);
-      for (const row of rosterRows.values()) if (row.open) fillStats(row);
-      fitSince();
-      if (rosterSort === "most") sortRoster();
+      rosterPanel.statsChanged();
     }));
     liveOnline = showOnline;
     showVoices();
-    // Value the donated sats at the current price; donor rankings retain their receipt prices. A bitcoin's price is
-    // in bananas, since a banana is a dollar; whether that price is live or stale is said on hover alone.
-    const showBananaRate = () => {
-      if (document.hidden || !BL.sheet.visible(el.bananaPanel)) return;
-      const rate = currentDonationRate(), total = donationValueText();
-      const tone = !rate ? "wait" : rate.stale ? "stale" : rate.live ? "live" : "idle";
-      const label = tone === "live" ? "Live BTCUSD price" : tone === "stale" ? "Stale BTCUSD price, the last one kept" : tone === "wait" ? "Waiting for the BTCUSD price" : "BTCUSD price";
-      const price = rate ? DONOR_BANANAS.format(rate.usdPerBtc) : "—";
-      const exchange = rate ? `≈ ${DONOR_BANANAS.format(1e8 / rate.usdPerBtc)} sats` : "— sats";
-      if (el.bananaBtcRate.dataset.tone !== tone) el.bananaBtcRate.dataset.tone = tone;
-      if (el.bananaBtcRate.title !== label) el.bananaBtcRate.title = label;
-      if (el.bananaBtcPrice.textContent !== price) el.bananaBtcPrice.textContent = price;
-      if (el.bananaExchange.textContent !== exchange) el.bananaExchange.textContent = exchange;
-      if (el.bananaTotal.textContent !== total) el.bananaTotal.textContent = total;
-      if (price.length !== fitPriceLength) fitBtcRate();
-    };
-    // The bitcoin line keeps to one line: "100,000,000 sats" while it fits, "100M sats" once a narrow panel or a long
-    // price would wrap it, and only past that does it wrap. Fitted again when the price's length or the line's width
-    // changes; digits are tabular, so the same length takes the same room.
-    let fitPriceLength = -1, fitWidth = 0;
-    const fitBtcRate = () => {
-      const line = el.bananaBtcRate;
-      fitPriceLength = el.bananaBtcPrice.textContent.length;
-      if (!fitWidth) return;
-      line.dataset.fit = "line";
-      el.bananaBtcSats.textContent = "100,000,000";
-      if (line.scrollWidth <= line.clientWidth) return;
-      el.bananaBtcSats.textContent = "100M";
-      if (line.scrollWidth > line.clientWidth) line.dataset.fit = "wrap";
-    };
-    const btcRateObserver = new ResizeObserver((entries) => {
-      const width = Math.round(entries[entries.length - 1].contentRect.width);
-      if (width === fitWidth) return;
-      fitWidth = width;
-      fitBtcRate();
-    });
-    btcRateObserver.observe(el.bananaBtcRate);
+    // The Bananas panel (banana-panel.js, shared with the Ooga Chat app) fills from donations.js; here its price is the
+    // 2140data socket's while it or the pile's value shows, and the demo's tally stands in while donations are simulated.
+    const bananas = BL.bananaPanel.create(el.bananaPanel, { demo: () => donationStats, rate: currentDonationRate,
+      visible: () => BL.sheet.visible(el.bananaPanel) });
     let stopBananaRate = null, pileValueVisible = false;
     const watchBananaRate = () => {
       const visible = !document.hidden && (pileValueVisible || BL.sheet.visible(el.bananaPanel));
-      if (visible && !stopBananaRate) stopBananaRate = BL.donationRate.watch(showBananaRate);
+      if (visible && !stopBananaRate) stopBananaRate = BL.donationRate.watch(bananas.showRate);
       else if (!visible && stopBananaRate) { stopBananaRate(); stopBananaRate = null; }
-      if (visible) showBananaRate();
+      if (visible) bananas.showRate();
     };
     const setPileValueVisible = (visible) => {
       if (pileValueVisible === visible) return;
@@ -766,134 +483,17 @@
     on(document, "sheetchange", watchBananaRate);
     listeners.push(() => {
       bananaRateObserver.disconnect();
-      btcRateObserver.disconnect();
       if (stopBananaRate) stopBananaRate();
+      bananas.dispose();
     });
     watchBananaRate();
-    // A fixed pool, so the DOM never grows with donations.
-    const recentRows = donationRows || (donationRows = Array.from({ length: BL.donations.RECENT_MAX }, () => {
-      const li = document.createElement("li"), name = document.createElement("span"), labelBox = document.createElement("span"), label = document.createTextNode("");
-      const badge = document.createElement("span"), amount = document.createElement("strong"), message = document.createElement("p");
-      // Every text node exists from the start, so filling a row later adds nothing to the DOM.
-      const amountText = document.createTextNode(""), messageText = document.createTextNode("");
-      name.className = "banana-recent-name";
-      labelBox.className = "banana-recent-label";
-      labelBox.append(label);
-      badge.className = "banana-verified";
-      badge.append(verifiedSeal.cloneNode(true));
-      badge.title = "Signed in with GitHub using this donor name";
-      badge.setAttribute("role", "img");
-      badge.setAttribute("aria-label", "GitHub name confirmed");
-      badge.hidden = true;
-      amount.className = "banana-amount";
-      message.className = "banana-recent-message";
-      message.hidden = true;
-      name.append(labelBox, badge);
-      amount.append(amountBanana.cloneNode(true), amountText);
-      message.append(messageText);
-      li.append(name, amount, message);
-      li.hidden = true;
-      el.bananaRecent.append(li);
-      return { li, name, labelBox, label, badge, amountText, message, messageText };
-    }));
-    // One row a ranked donor, made as the board first grows to it and kept for the page life: the board scrolls inside
-    // its five-row window, and both boards it shows hold at most 256 (the API's and the game's demo donors).
-    const leaderRows = donorRows || (donorRows = []);
-    const leaderRow = (i) => {
-      const li = document.createElement("li"), rank = document.createElement("span"), name = document.createElement("span"), amount = document.createElement("strong");
-      const nameText = document.createTextNode(""), amountText = document.createTextNode("");
-      rank.className = "banana-rank"; rank.textContent = String(i + 1).padStart(2, "0");
-      name.className = "banana-donor"; name.append(nameText);
-      amount.className = "banana-amount"; amount.append(amountBanana.cloneNode(true), amountText);
-      li.append(rank, name, amount); li.hidden = true; el.bananaLeaders.append(li);
-      return { li, name, nameText, amountText };
+    // The donation popup's message field names the API's bar.
+    const showMessageBar = () => {
+      el.donationMessageLabel.textContent = `Banana message (up to 280 characters, with a tip of ${BL.bananaPanel.BANANA_COUNT.format(BL.donations.messageMinSats)} sats or more)`;
     };
-    // The recent list's checkbox keeps it to tips at or above the message bar: on until the visitor turns it off,
-    // and their choice either way remembered in this browser.
-    const RECENT_BAR_KEY = "ooga-recent-bar";
-    let recentBarOnly = true;
-    try { recentBarOnly = localStorage.getItem(RECENT_BAR_KEY) !== "0"; } catch { /* no storage: on, as for a first visit */ }
-    el.bananaRecentBar.checked = recentBarOnly;
-    on(el.bananaRecentBar, "change", () => {
-      recentBarOnly = el.bananaRecentBar.checked;
-      try { localStorage.setItem(RECENT_BAR_KEY, recentBarOnly ? "1" : "0"); } catch { /* kept for this visit alone */ }
-      refreshDonors(true);
-      el.bananaRecentBar.blur();
-    });
-    let shownTally, shownBoard, shownRecent, shownReal, shownNetwork, shownOpen, shownBar;
-    const refreshDonors = (force = false) => {
-      const { real, state, testNetwork, messageMinSats: bar } = BL.donations;
-      showBananaRate();
-      if (!force && shownTally === state.tally && shownBoard === state.board && shownRecent === state.recent && shownReal === real && shownNetwork === testNetwork && shownOpen === state.open && shownBar === bar) return;
-      shownTally = state.tally; shownBoard = state.board; shownRecent = state.recent; shownReal = real; shownNetwork = testNetwork; shownOpen = state.open; shownBar = bar;
-      const tally = real ? state.tally : donationStats;
-      // The chip says whose figures these are: this browser's demo, a test network's, the feed still loading,
-      // donations closed, or the island's live feed.
-      const tone = !real ? "idle" : testNetwork ? "test" : !tally ? "wait" : state.open === false ? "closed" : "live";
-      el.bananaSource.dataset.tone = tone;
-      el.bananaSource.textContent = tone === "idle" ? "Demo" : tone === "test" ? `Test · ${testNetwork}` : tone === "wait" ? "Loading" : tone === "closed" ? "Closed" : "Live";
-      el.bananaSource.title = tone === "idle" ? "Demo donations saved in this browser" : tone === "test" ? `Test donations on ${testNetwork}, not real bitcoin`
-        : tone === "wait" ? "Waiting for the island’s donation feed" : tone === "closed" ? "Donations are closed for now" : "The island’s donation feed";
-      el.statDonations.textContent = tally ? BANANA_COUNT.format(real ? tally.count : tally.donations) : "—";
-      el.statSats.textContent = tally ? BANANA_COUNT.format(real ? tally.sats : tally.totalSats) : "—";
-      const entries = real ? donorUnit === "sats" ? state.boardSats : state.board : donationStats?.donors;
-      const missingSats = donorUnit === "sats" && (real && state.board !== null && entries === null || entries?.some((entry) => entry.sats === null));
-      // The API ranks before rounding bananas, with stable account-id ties. Keep that order.
-      const ranked = missingSats ? [] : real ? entries || [] : (entries || []).slice().sort((a, b) =>
-        b[donorUnit] - a[donorUnit] || b[donorUnit === "bananas" ? "sats" : "bananas"] - a[donorUnit === "bananas" ? "sats" : "bananas"]
-        || a.handle.localeCompare(b.handle));
-      while (leaderRows.length < ranked.length) leaderRows.push(leaderRow(leaderRows.length));
-      for (let i = 0; i < leaderRows.length; i++) {
-        const entry = ranked[i], row = leaderRows[i];
-        row.li.hidden = !entry;
-        if (!entry) continue;
-        const name = entry.handle ? `@${entry.handle}` : "Anonymous";
-        const amount = (donorUnit === "sats" ? BANANA_COUNT : DONOR_BANANAS).format(entry[donorUnit]);
-        if (row.nameText.data !== name) { row.nameText.data = name; row.name.title = name; }
-        if (row.amountText.data !== amount) row.amountText.data = amount;
-        row.name.dataset.anon = String(!entry.handle);
-      }
-      el.bananaEmpty.hidden = ranked.length > 0;
-      el.bananaEmpty.textContent = missingSats ? "Sat totals are not available from the donation feed yet."
-        : real && !entries ? "Loading the donor leaderboard…"
-        : real ? "No donations yet. Feed the first Ooga!" : "New demo donations will appear here.";
-      // The recent list: the newest first, its orange check only on the API's word that the donor's GitHub login
-      // matched the name, into the fixed rows (the first `RECENT_MAX` the checkbox leaves).
-      const all = real ? state.recent || [] : donationStats?.recentDonations || [];
-      const recent = recentBarOnly ? all.filter((entry) => entry.sats >= bar) : all;
-      el.bananaRecentBarLabel.textContent = `${BANANA_COUNT.format(bar)} sats and up only`;
-      el.donationMessageLabel.textContent = `Banana message (up to 280 characters, with a tip of ${BANANA_COUNT.format(bar)} sats or more)`;
-      for (let i = 0; i < recentRows.length; i++) {
-        const row = recentRows[i], entry = recent[i];
-        row.li.hidden = !entry;
-        if (!entry) continue;
-        row.label.data = entry.handle ? `@${entry.handle}` : "Anonymous";
-        if (row.labelBox.title !== row.label.data) row.labelBox.title = row.label.data;
-        row.name.dataset.anon = String(!entry.handle);
-        row.badge.hidden = !(real && entry.verified);
-        row.amountText.data = (donorUnit === "sats" ? BANANA_COUNT : DONOR_BANANAS).format(entry[donorUnit]);
-        const message = BL.donations.carried(entry.sats, entry.message);
-        row.message.hidden = !message;
-        row.messageText.data = message;
-      }
-      el.bananaRecentEmpty.hidden = recent.length > 0;
-      el.bananaRecentEmpty.textContent = recentBarOnly && all.length ? `None of the latest tips reached ${BANANA_COUNT.format(bar)} sats.`
-        : real ? "Recent donations will appear here as they arrive." : "New demo donations will appear here.";
-      el.bananaBoardNote.textContent = !real ? "Demo donations in this browser only. Earlier tips have no donor history."
-        : testNetwork ? `Test donations on ${testNetwork}. Leaderboard values are recorded when paid.`
-        : "Leaderboard totals use each donation's recorded value.";
-      el.bananaBoardUnit.textContent = donorUnit === "sats" ? "Sats" : "Bananas";
-      el.bananaPanel.dataset.unit = donorUnit;
-      el.bananaLeaders.setAttribute("aria-label", `Top donors by ${donorUnit}`);
-      for (const button of el.donorUnits) button.setAttribute("aria-pressed", String(button.dataset.donorUnit === donorUnit));
-    };
-    for (const button of el.donorUnits) on(button, "click", () => {
-      donorUnit = button.dataset.donorUnit;
-      refreshDonors(true);
-    });
-    listeners.push(BL.donations.subscribeState(refreshDonors));
-    liveDonors = refreshDonors;
-    refreshDonors(true);
+    listeners.push(BL.donations.subscribeState(showMessageBar));
+    showMessageBar();
+    liveDonors = bananas.refresh;
     const setStats = (stats) => {
       setDonationStats(stats);
     };
@@ -904,29 +504,28 @@
       el.act.textContent = label;
     };
     let actionHandler = null;
-    const DETACHED_NAMES = { pile: "Pile", lab: "Lab", mirror: "Mirror", underground: "HQ", basement: "Basement", mempool: "Mempool", factory: "LN Factory", arcade: "Ooga Arcade", bca: "B.C.A.", gate: "North gate", bifrost: "₿IFRÖST", timechain: "TC Sphere" };
+    const DETACHED_NAMES = { pile: "Pile", lab: "Lab", mirror: "Mirror", underground: "HQ", basement: "Basement", mempool: "Mempool", factory: "LN Factory", arcade: "Ooga Arcade", bca: "B.C.A.", gate: "North gate", bifrost: "₿IFRÖST", timechain: "TC Sphere", repos: "Merge Rock" };
     let destinationLabels = DETACHED_NAMES;
     let destinationNames = [];
-    let destinationIndex = -1;
     let detachedPreset = "pile", detachedNameShown = false, detachedSelectionShown = false, areaLabel = "";
     el.modeDestination.disabled = false;
-    el.modeDestination.title = "Map · cycle destinations";
-    el.modeDestinationLabel.textContent = "Map. Cycle destinations";
+    el.modeDestination.title = "Map · choose a destination";
+    el.modeDestinationLabel.textContent = "Map. Choose a destination";
     const setDestinations = (names, labels = DETACHED_NAMES) => {
       destinationLabels = labels;
       destinationNames = names.filter(name => destinationLabels[name]);
-      destinationIndex = destinationNames.indexOf(detachedPreset);
       if (!destinationLabels[detachedPreset] && destinationNames.length) detachedPreset = destinationNames[0];
       el.modeDestination.hidden = !modeVisible || !destinationNames.length;
     };
-    const cycleDestinations = () => {
-      if (!destinationNames.length || !actionHandler) return;
-      // A refused arrival must not trap the next press at the same place.
-      // Only a successful navigation updates the displayed destination.
-      destinationIndex = (destinationIndex + 1) % destinationNames.length;
-      actionHandler("mode-preset", destinationNames[destinationIndex]);
-      showDestinationLabel(el.modeDestinationName.textContent);
+    const mapProvider = {
+      names: () => destinationNames, label: name => destinationLabels[name], selected: () => detachedPreset,
+      controlled: () => document.body.dataset.activeScene === "hub" && !!(modeActor || gorillaEntry),
+      travels: () => document.body.dataset.activeScene === "hub" && !!gorillaEntry,
+      available: () => modeVisible && destinationNames.length > 0 && !el.modeDestination.hidden,
+      position: () => (gorillaEntry || modeActor)?.root.position || null,
+      travel: name => actionHandler ? actionHandler("mode-preset", name) : false
     };
+    BL.destinationMap.connect(mapProvider);
     let destinationAnchored = false, destinationX = 0, destinationY = 0, destinationZ = 0;
     let destinationLabelTimer = 0;
     const showDestinationLabel = text => {
@@ -959,7 +558,6 @@
     const setDetachedView = (name, announce = false, position = null) => {
       if (!destinationLabels[name]) return;
       detachedPreset = name;
-      destinationIndex = destinationNames.indexOf(name);
       destinationAnchored = !!position;
       if (position) { destinationX = position.x; destinationY = position.y; destinationZ = position.z; }
       detachedSelectionShown = true;
@@ -969,9 +567,10 @@
     };
     let gorillaEntry = null, gorillaView = "orbit", gorillaCombat = false, gorillaCombatEnabled = true;
     let modeName = "", modeGeometry = null, modeSelected = false, modeCombat = false, modeView = "", modeHealth = -1, modeHealthMax = 0, modeGorilla = false;
-    let modeCombatEnabled = true, modeVisible = true;
+    let modeActor = null, modeCombatEnabled = true, modeVisible = true;
     const setMode = (cave, combat = false, view = cave ? "orbit" : "detached", visible = true, combatEnabled = true) => {
       const gorilla = gorillaEntry ? gorillaEntry.gorilla : null;
+      modeActor = gorilla ? null : cave;
       modeVisible = visible;
       if (gorilla) { cave = gorillaEntry.owner; combat = gorillaCombat; view = gorillaView; visible = true; combatEnabled = gorillaCombatEnabled; }
       const selected = !!cave, name = selected ? cave.traits.name : "", shown = selected ? cave.traits.display : "";
@@ -1034,6 +633,15 @@
       primaryPointer = -1; primaryKey = "";
       if (pointer >= 0 && el.primary.hasPointerCapture(pointer)) el.primary.releasePointerCapture(pointer);
       if (actionHandler) actionHandler(cancel ? "weapon-primary-cancel" : "weapon-primary-up");
+    };
+    // The AK button's press, held from its pointer's down to its up (its handlers are with the primary's).
+    let weaponPointer = -1;
+    const finishWeapon = (cancel) => {
+      if (weaponPointer < 0) return;
+      const pointer = weaponPointer;
+      weaponPointer = -1;
+      if (el.weapon.hasPointerCapture(pointer)) el.weapon.releasePointerCapture(pointer);
+      if (actionHandler) actionHandler(cancel ? "weapon-secondary-cancel" : "weapon-secondary-up");
     };
     const setPrimary = (available, selected, geometry, charge = 0, held = false, power = 1, aiming = false, ownerName = "") => {
       if (!available || !selected && primarySelected || geometry !== primaryGeometry) finishPrimary(true);
@@ -1144,6 +752,7 @@
         weaponShown = available;
       }
       if (el.weapon.hidden !== (!available || !!gorillaEntry)) el.weapon.hidden = !available || !!gorillaEntry;
+      if (el.weapon.hidden) finishWeapon(true);
       if (equipped !== weaponEquipped) {
         weaponEquipped = equipped;
         el.weapon.dataset.equipped = String(equipped);
@@ -1248,7 +857,7 @@
     };
     const setGorilla = (entry, view = "orbit", combat = false, combatEnabled = true) => {
       if (entry === gorillaEntry && view === gorillaView && combat === gorillaCombat && combatEnabled === gorillaCombatEnabled) return;
-      if (entry !== gorillaEntry) finishPrimary(true);
+      if (entry !== gorillaEntry) { finishPrimary(true); finishWeapon(true); }
       gorillaEntry = entry;
       gorillaView = view;
       gorillaCombat = combat;
@@ -1339,7 +948,9 @@
       // A board is any object with `title`, `help`, `canvas`, `count`, `index`, `caption`, `note`, `version` and
       // `go(index)`, plus optional `wide` and `captionAbove` layouts and a `link` out ({ href, label }, opened in a new tab). The dialog copies the canvas, captions the page, lays one dot per page and pages with the
       // chevrons, the dots and the arrow keys; it never learns what a board shows, so a board can change freely.
-      // `updateBoard` repaints whenever the open board's version moves.
+      // `updateBoard` repaints whenever the open board's version moves. `expanded` gives a screen more viewport space.
+      // Optional `hover(x,y)`, `dragStart(x,y)`, `dragMove(x,y)`, `dragEnd(cancelled)` and `onClose()` keep interactive
+      // canvases in their own pixel coordinates; a captured drag suppresses its following click.
       // A `floating` board also supplies `paused` and `setPaused`, and keeps island input available.
       let board = null, boardShown = -1, boardDots = -1;
       let controlsHidden = saved?.controlsHidden === true;
@@ -1431,11 +1042,57 @@
         paintBoardControls();
         scheduleBoardSave();
       };
+      let screenPointer = -1, suppressScreenPick = false;
+      const screenPoint = { x: 0, y: 0 };
+      const pointOnBoard = (e) => {
+        const r = el.boardScreen.getBoundingClientRect(), src = board.canvas;
+        screenPoint.x = (e.clientX - r.left - el.boardScreen.clientLeft) * src.width / el.boardScreen.clientWidth;
+        screenPoint.y = (e.clientY - r.top - el.boardScreen.clientTop) * src.height / el.boardScreen.clientHeight;
+      };
+      const finishScreenPointer = (cancelled) => {
+        if (screenPointer < 0) return;
+        const id = screenPointer; screenPointer = -1;
+        if (el.boardScreen.hasPointerCapture(id)) el.boardScreen.releasePointerCapture(id);
+        board?.dragEnd?.(cancelled);
+        suppressScreenPick = true;
+        updateBoard();
+      };
+      on(el.boardScreen, "pointerdown", e => {
+        if (screenPointer >= 0) { finishScreenPointer(true); e.preventDefault(); return; }
+        suppressScreenPick = false;
+        if (!board?.dragStart || e.button !== 0 || !e.isPrimary) return;
+        pointOnBoard(e);
+        if (!board.dragStart(screenPoint.x, screenPoint.y)) return;
+        screenPointer = e.pointerId;
+        // The virtual menu cursor owns capture for the synthetic events it routes.
+        if (e.isTrusted) el.boardScreen.setPointerCapture(e.pointerId);
+        e.preventDefault(); e.stopPropagation(); updateBoard();
+      });
+      on(el.boardScreen, "pointermove", e => {
+        if (!board) return;
+        if (e.pointerId === screenPointer) {
+          pointOnBoard(e); board.dragMove(screenPoint.x, screenPoint.y);
+          e.preventDefault(); e.stopPropagation(); updateBoard();
+        } else if (board.hover) {
+          pointOnBoard(e); board.hover(screenPoint.x, screenPoint.y); updateBoard();
+        }
+      });
+      on(el.boardScreen, "pointerleave", () => { if (screenPointer < 0 && board?.hover) { board.hover(-1, -1); updateBoard(); } });
+      on(el.boardScreen, "pointerup", e => {
+        if (e.pointerId !== screenPointer) return;
+        pointOnBoard(e); board.dragMove(screenPoint.x, screenPoint.y);
+        finishScreenPointer(false); e.preventDefault(); e.stopPropagation();
+      });
+      for (const type of ["pointercancel", "lostpointercapture"]) on(el.boardScreen, type, e => { if (e.pointerId === screenPointer) finishScreenPointer(true); });
+      on(window, "blur", () => finishScreenPointer(true));
+      on(document, "visibilitychange", () => { if (document.hidden) finishScreenPointer(true); });
       on(el.boardScreen, "click", (e) => {
+        if (suppressScreenPick) { suppressScreenPick = false; e.preventDefault(); return; }
         // A board that takes picks (the Sphere's room directory) hears where on its picture the press landed, and
         // answers "close" when that is done with it.
         if (board?.pick) {
-          if (board.pick(e.offsetX * board.canvas.width / el.boardScreen.clientWidth, e.offsetY * board.canvas.height / el.boardScreen.clientHeight) === "close") closeBoard();
+          pointOnBoard(e);
+          if (board.pick(screenPoint.x, screenPoint.y) === "close") closeBoard();
           else updateBoard();
           return;
         }
@@ -1666,12 +1323,14 @@
         if (floatingId) scheduleBoardSave();
       };
       const openBoard = (next) => {
-        finishBoardPointer();
+        finishScreenPointer(true); finishBoardPointer();
+        board?.onClose?.(); suppressScreenPick = false;
         if (el.board.open && !!board?.floating !== !!next.floating) el.board.close();
         board = next;
         boardDots = -1;
         letterSign(el.boardTitle, board.title);
         el.board.classList.toggle("board-wide", !!board.wide);
+        el.board.classList.toggle("board-expanded", !!board.expanded);
         el.board.classList.toggle("board-floating", !!board.floating);
         el.board.classList.toggle("board-caption-above", !!board.captionAbove);
         el.board.classList.toggle("board-carousel", !!board.carousel);
@@ -1719,9 +1378,10 @@
         if (board.floating) { layoutBoard(); placeBoard(); }
       };
       const closeBoard = () => {
-        finishBoardPointer();
+        finishScreenPointer(true); finishBoardPointer();
         const closing = board;
         board = null;
+        closing?.onClose?.();
         if (el.board.open) el.board.close();
         if (floatingId) {
           if (lastBoard === controller) { lastBoardWidth = boardWindow.width; lastBoard = null; }
@@ -1749,6 +1409,7 @@
       };
       const pageBoard = (step) => {
         if (!board) return;
+        finishScreenPointer(true);
         board.go((board.index + step + board.count) % board.count);
         updateBoard();
       };
@@ -1811,7 +1472,7 @@
       on(el.boardDots, "click", (e) => {
         const dot = e.target.closest(".board-dot");
         if (!dot || !board) return;
-        interactBoard();
+        interactBoard(); finishScreenPointer(true);
         dot.blur();
         board.go(+dot.dataset.page);
         updateBoard();
@@ -1836,7 +1497,7 @@
         open: openBoard, close: closeBoard, update: updateBoard,
         setHidden(on) {
           if (el.board.hidden === on) return;
-          finishBoardPointer();
+          finishScreenPointer(true); finishBoardPointer();
           if (on && el.board.contains(document.activeElement)) document.activeElement.blur();
           el.board.hidden = on;
           if (!on && board) {
@@ -1915,9 +1576,7 @@
       panelsHidden = on;
       for (const popup of floatingBoards) popup.setHidden(on);
     };
-    const openRecipe = () => {
-      if (!el.recipe.open) el.recipe.showModal();
-    };
+    const openRecipe = () => showRecipe(false);
     const closeRecipe = () => {
       if (el.recipe.open) el.recipe.close();
     };
@@ -2001,6 +1660,32 @@
     on(window, "blur", () => finishPrimary(true));
     on(document, "visibilitychange", () => { if (document.hidden) finishPrimary(true); });
     on(el.primary, "contextmenu", (e) => e.preventDefault());
+    // The AK button fires while it is held: a press pulls the trigger (or, with the AK put away, takes it out) and
+    // letting go releases it, so a held press is full auto. A keyboard press is still one burst, through the click.
+    const weaponPointerEvent = (e) => {
+      if (e.button !== 0) return;
+      // As the primary's: a press or release under another held button arrives as a pointermove.
+      const down = e.type === "pointerdown" || e.type === "pointermove" && (e.buttons & 1);
+      if (down) {
+        if (weaponPointer >= 0 || el.weapon.hidden) return;
+        e.preventDefault(); e.stopPropagation();
+        weaponPointer = e.pointerId;
+        if (e.isTrusted && !document.pointerLockElement) el.weapon.setPointerCapture(e.pointerId);
+        if (actionHandler) actionHandler("weapon-secondary-down");
+      } else if (e.pointerId === weaponPointer) {
+        e.preventDefault(); e.stopPropagation();
+        finishWeapon(false);
+        el.weapon.blur();
+      }
+    };
+    on(el.weapon, "pointerdown", weaponPointerEvent);
+    on(el.weapon, "pointerup", weaponPointerEvent);
+    on(el.weapon, "pointermove", weaponPointerEvent);
+    on(el.weapon, "pointercancel", (e) => { if (e.pointerId === weaponPointer) finishWeapon(true); });
+    on(el.weapon, "lostpointercapture", (e) => { if (e.pointerId === weaponPointer) finishWeapon(true); });
+    on(window, "blur", () => finishWeapon(true));
+    on(document, "visibilitychange", () => { if (document.hidden) finishWeapon(true); });
+    on(el.weapon, "contextmenu", (e) => e.preventDefault());
     const pressMode = () => {
       if (modeSelected) { if (actionHandler) actionHandler("mode-toggle"); }
       else {
@@ -2031,13 +1716,14 @@
       // Native and virtual pointer clicks already completed their press/release.
       // A detail-zero click is an assistive or programmatic tap without a hold.
       if (b === el.primary && (e.detail !== 0 || primaryPointer >= 0 || primaryKey)) return;
+      if (b === el.weapon && (e.detail !== 0 || weaponPointer >= 0)) return;
       if (b === el.mode && e.detail !== 0) return;
       b.blur();
       if (b.dataset.action === "feed") openFeed();
       else if (b.dataset.action === "recipe-close") closeRecipe();
       else if (b.dataset.action === "recipe-copy") copyRecipe(b);
       else if (b.dataset.action === "intro-go") b.closest("[data-intro]").hidden = true;
-      else if (b === el.modeDestination) cycleDestinations();
+      else if (b === el.modeDestination) BL.destinationMap.open();
       else if (b === el.mode) pressMode();
       else if (b.dataset.action === "account-login") BL.net.login();
       else if (b.dataset.action === "account-logout") BL.net.logout();
@@ -2249,119 +1935,13 @@
     const onPreset = (fn) => {
       presetHandler = fn;
     };
-    let assignHandler = null, unassignHandler = null;
-    const onAssign = (fn) => {
-      assignHandler = fn;
-    };
-    const onUnassign = (fn) => {
-      unassignHandler = fn;
-    };
-    const iconCache = new Map();
-    const iconFor = (item) => {
-      let icon = iconCache.get(item.id);
-      if (!icon && renderIcon) {
-        icon = renderIcon(item);
-        iconCache.set(item.id, icon);
-      }
-      return icon;
-    };
-    const groupEntries = (entries) => {
-      const groups = new Map();
-      for (const entry of entries) {
-        const item = catalog.find((c) => c.id === entry.itemId);
-        if (!item) continue;
-        let group = groups.get(item.id);
-        if (!group) {
-          group = { item, tier: entry.tier, entries: [] };
-          groups.set(item.id, group);
-        }
-        group.entries.push(entry);
-      }
-      return [...groups.values()].sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier] || a.item.name.localeCompare(b.item.name));
-    };
-    const renderInventory = (entries, assignedTo, wornBy = () => null) => {
-      el.inventory.replaceChildren();
-      el.inventoryEmpty.hidden = entries.length > 0;
-      sheet.setLootCount(entries.length);
-      for (const group of groupEntries(entries)) {
-        const { item } = group;
-        const worn = group.entries.map((e) => ({ entry: e, name: assignedTo(e.id) })).filter((w) => w.name);
-        const free = group.entries.filter((e) => !assignedTo(e.id));
-        const li = document.createElement("li");
-        li.className = "loot-row";
-        li.style.setProperty("--tier", tierColors[group.tier]);
-        const icon = iconFor(item);
-        if (icon) {
-          const canvas = document.createElement("canvas");
-          canvas.className = "loot-icon";
-          canvas.width = icon.width;
-          canvas.height = icon.height;
-          canvas.getContext("2d").drawImage(icon, 0, 0);
-          li.append(canvas);
-        }
-        const main = document.createElement("div");
-        main.className = "loot-main";
-        const title = document.createElement("div");
-        title.className = "loot-title";
-        const name = document.createElement("span");
-        name.className = "loot-name";
-        name.textContent = item.name;
-        const badge = document.createElement("span");
-        badge.className = "loot-tier";
-        badge.textContent = group.tier;
-        title.append(name, badge);
-        if (group.entries.length > 1) {
-          const count = document.createElement("span");
-          count.className = "loot-count";
-          count.textContent = `×${group.entries.length}`;
-          title.append(count);
-        }
-        main.append(title);
-        if (worn.length) {
-          const chips = document.createElement("div");
-          chips.className = "loot-worn";
-          for (const w of worn) {
-            const chip = document.createElement("button");
-            chip.type = "button";
-            chip.className = "chip";
-            chip.title = `Take ${item.name} off ${BL.characters.displayOf(w.name)}`;
-            chip.textContent = BL.characters.displayOf(w.name);
-            chip.addEventListener("click", () => unassignHandler && unassignHandler(w.name), { signal });
-            chips.append(chip);
-          }
-          main.append(chips);
-        }
-        li.append(main);
-        const select = document.createElement("select");
-        select.className = "loot-assign";
-        select.setAttribute("aria-label", `Give ${item.name} to a caveman`);
-        const placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = free.length ? `Give one to… (${free.length} free)` : "All worn";
-        select.append(placeholder);
-        select.disabled = free.length === 0;
-        for (const contributor of roster) {
-          const opt = document.createElement("option");
-          opt.value = contributor.name;
-          const wearing = wornBy(contributor.name);
-          opt.textContent = wearing ? `${contributor.display} · ${wearing}` : `${contributor.display} · no swag`;
-          select.append(opt);
-        }
-        select.addEventListener("change", () => {
-          const target = select.value;
-          select.value = "";
-          select.blur();
-          if (target && free.length) assignHandler && assignHandler(free[0].id, target);
-        }, { signal });
-        li.append(select);
-        el.inventory.append(li);
-      }
-    };
     // End this visit; the attached sheet rows belong to the page.
     const dispose = () => {
+      BL.destinationMap.disconnect(mapProvider);
       delete document.body.dataset.bannerOogas;
       sheet.dispose();
       finishPrimary(true);
+      finishWeapon(true);
       window.clearTimeout(toastTimer);
       window.clearTimeout(toastHideTimer);
       window.clearTimeout(hintTimer);
@@ -2371,9 +1951,8 @@
       listeners.length = 0;
       if (lifetime) lifetime.abort();
       if (liveRows === rosterRows) liveRows = liveOnline = null;
-      if (liveDonors === refreshDonors) liveDonors = null;
+      if (liveDonors === bananas.refresh) liveDonors = null;
       // Page-owned roster and donation rows remain attached; the next visit reconciles their contents.
-      el.inventory.replaceChildren();
       el.toast.classList.remove("show");
       el.toast.hidden = true;
       el.hint.classList.remove("show");
@@ -2391,7 +1970,6 @@
       closeRecipe();
       closeBoard(true);
       destinationNames = [];
-      destinationIndex = -1;
       mainBoard.dispose();
       el.board.classList.remove("board-floating");
       el.board.removeAttribute("style");
@@ -2402,16 +1980,26 @@
     return {
       // Engines keep this facade while a retained scene takes a fresh visit signal and sheet state.
       renew(signal) {
-        const next = create({ roster, catalog, tierColors, renderIcon, lootEnabled, healthEnabled, signal, escapeHeld });
+        const next = create({ roster, healthEnabled, signal, escapeHeld });
         next.tooltip.setVisibility(this.tooltip.visibility);
-        next.onAction(actionHandler); next.onPreset(presetHandler); next.onAssign(assignHandler); next.onUnassign(unassignHandler);
+        next.onAction(actionHandler); next.onPreset(presetHandler);
         Object.defineProperties(this, Object.getOwnPropertyDescriptors(next));
         return this;
       },
-      el, openFeed, openRecipe, closeRecipe, dismissOutside, openBoard, closeBoard, updateBoard, restoreBoards, setPanelsHidden, foldPanels, setRosterRow, setStats, setAct, setMode, setWeaponSkin, setDestinations, setGorilla, setGorillaSmashPower, setDetachedView, fadeDetachedName, setAreaLabel, setPrimary, setWeapon, setMagazine, setJetpack, setSubtitle, onAction, toast, tooltip, hint, hideHint, letterSign, selectTab, onPreset, setPileValueVisible, onAssign, onUnassign, renderInventory, dispose };
+      el, openFeed, openRecipe, closeRecipe, dismissOutside, openBoard, closeBoard, updateBoard, restoreBoards, setPanelsHidden, foldPanels, setRosterRow, setStats, setAct, setMode, setWeaponSkin, setDestinations, setGorilla, setGorillaSmashPower, setDetachedView, fadeDetachedName, setAreaLabel, setPrimary, setWeapon, setMagazine, setJetpack, setSubtitle, onAction, toast, tooltip, hint, hideHint, letterSign, selectTab, onPreset, setPileValueVisible, dispose };
   };
   // Detached panels can be visible together. Each has a view of the same account and voice state.
   const ROOM_WORDS = { replaced: "open in another tab", full: "island full" };
+  // What voice needs cannot change in a page's life: worked out once, so the button can name what this browser lacks
+  // before the visitor is asked to join.
+  let voiceSupportReason = null;
+  const voiceReason = () => {
+    if (voiceSupportReason === null) {
+      const support = BL.voice && BL.voice.support ? BL.voice.support() : { secure: true, webrtc: true, mic: true };
+      voiceSupportReason = !support.secure ? "Voice needs a secure page" : !support.webrtc ? "This browser has no WebRTC" : !support.mic ? "This browser has no microphone" : "";
+    }
+    return voiceSupportReason;
+  };
   const accountPrefixes = [""];
   for (const slot of document.querySelectorAll("[data-account-copy]")) {
     const prefix = slot.dataset.accountCopy + "-";
@@ -2431,8 +2019,28 @@
       if (el[key] !== value) el[key] = value;
     }
   };
+  // The banner's own Sign in, which turns into Sign out, in sight without a panel open: its `data-action` is whichever of
+  // the account row's two applies, so a scene's HUD presses it as it presses the row's. Found when first asked for, as
+  // nothing here reads the document at load.
+  let accountTopNode = null;
+  const accountTop = () => accountTopNode || (accountTopNode = $("account-top"));
+  // Add an Ooga, with its note when a sign-in was refused for want of an Ooga: a scene's HUD opens it, and the director
+  // with no HUD at hand.
+  const showRecipe = (refused) => {
+    const recipe = $("recipe");
+    $("recipe-note").hidden = !refused;
+    if (!recipe.open) recipe.showModal();
+  };
   const showAccount = ({ backend, me, room, online }) => {
     const live = !!me && room === "live", words = live ? `${online} online` : ROOM_WORDS[room] || "";
+    const top = accountTop(), topTip = me ? `Signed in as ${me.display} · Sign out` : "Sign in with GitHub · needs your own Ooga";
+    if (top.hidden !== !backend) top.hidden = !backend;
+    if (top.title !== topTip) {
+      top.title = topTip;
+      top.setAttribute("aria-label", me ? "Sign out" : "Sign in with GitHub");
+      top.dataset.signed = String(!!me);
+      top.dataset.action = me ? "account-logout" : "account-login";
+    }
     writeAccount("account", "hidden", !backend);
     writeAccount("account-name", "textContent", me ? me.display : "");
     writeAccount("account-name", "hidden", !me);
@@ -2442,17 +2050,27 @@
     writeAccount("account-room", "hidden", !me || !words);
     writeAccount("account-rejoin", "hidden", !me || !ROOM_WORDS[room]);
     const voice = BL.voice.stats;
-    const voiceFailure = voice.returning ? voice.micError : voice.enabled ? "" : voice.error || voice.micError;
-    const voiceWords = voice.joining ? "Joining voice" : voiceFailure ? `Voice: ${voiceFailure}` : !voice.enabled && !voice.returning ? "Join voice" : voice.muted ? "Unmute" : "Mute";
+    const iceBlocked = voice.error === BL.voice.ICE_BLOCKED;
+    const voiceFailure = iceBlocked ? voice.error : voice.returning ? voice.micError : voice.enabled ? "" : voice.error || voice.micError;
+    const reason = voiceReason();
+    const voiceWords = reason ? reason : voice.reconnecting ? "Reconnecting voice" : voice.joining ? "Joining voice" : voiceFailure ? `Voice: ${voiceFailure}` : !voice.enabled && !voice.returning ? "Join voice" : voice.muted ? "Unmute" : "Mute";
     writeAccount("account-voice", "hidden", !live);
     writeAccount("account-voice", "textContent", voiceWords);
-    writeAccount("account-voice-leave", "hidden", !live || !voice.enabled && !voice.returning);
+    writeAccount("account-voice", "disabled", !!reason);
+    // A blocked WebRTC explains itself in a tooltip, and only while it is the reason: a VPN's leak protection is what
+    // usually does it, by turning off non-proxied UDP (Brave's "WebRTC IP handling policy").
+    const voiceTip = iceBlocked
+      ? "A VPN's leak protection can block WebRTC by setting the browser's IP handling policy to disable non-proxied UDP (Brave specific). Allow WebRTC for this site, or turn that protection off."
+      : "";
+    writeAccount("account-voice", "title", voiceTip);
+    writeAccount("account-voice-leave", "hidden", !live || !voice.enabled && !voice.returning && !voice.reconnecting);
     const pressed = String(voice.enabled && !voice.muted), onlineDot = String(live);
     for (const row of fieldsFor("account")) if (row.dataset.live !== onlineDot) row.dataset.live = onlineDot;
     for (const button of fieldsFor("account-voice")) if (button.getAttribute("aria-pressed") !== pressed) button.setAttribute("aria-pressed", pressed);
   };
   // The microphone's note (#181), page-level as the account line is: muted in voice, it stays until unmuted;
-  // alone in voice (nobody here to hear, so the microphone is held off), it says so until someone comes;
+  // alone in voice (nobody here to hear, so the microphone is held off), it says so until someone comes; held (Ooga Chat's
+  // public audience is still being cut off after leaving the outdoors, outdoor-voice.js), it says so until the room confirms;
   // unmuting, or someone coming, says "Mic on" for MIC_ON_MS, then it goes. A mute outranks alone.
   // `keyed` is whether the page reserves M for voice mute outside editable fields.
   const MIC_ON_MS = 1500, MIC_COARSE = window.matchMedia("(pointer: coarse)").matches;
@@ -2460,8 +2078,9 @@
   const showMic = (voice, keyed) => {
     // Listen-only visitors (never opted in to speak, unlike one back from an earlier session) see no microphone status at all.
     const speaker = !!voice.micWanted || !!voice.returning;
-    const muted = speaker && voice.muted && (voice.publishing || voice.joining || voice.returning), alone = !muted && speaker && voice.alone;
-    const shown = muted ? keyed && !MIC_COARSE ? "Mic muted \u00b7 M to unmute" : "Mic muted \u00b7 Unmute in the panel" : alone ? "Alone \u00b7 mic off" : speaker && voice.publishing ? "Mic on" : "";
+    // Alone (voice.js) says nothing: the microphone still meters, so the visitor sees it work with nobody about.
+    const muted = speaker && voice.muted && (voice.publishing || voice.joining || voice.returning), alone = !muted && speaker && voice.held;
+    const shown = muted ? keyed && !MIC_COARSE ? "Mic muted \u00b7 M to unmute" : "Mic muted \u00b7 Unmute in the panel" : alone ? "Leaving public voice \u00b7 mic held" : speaker && voice.publishing ? "Mic on" : "";
     if (shown === micShown) return;
     const note = $("mic-note"), was = micShown;
     micShown = shown;
@@ -2486,171 +2105,17 @@
     const character = BL.net.characterOf(login);
     return character && liveRows.get(character.handle) || body && liveRows.get(BL.net.bodyName(body)) || null;
   };
-  // A contributor's stats, a darker strip under their row that their name opens: their Ooga's face, the day of their
-  // first contribution (the character's `joined`), their contributions across the org, all five kinds, and every
-  // repository they have contributed to with their count there, from the newest oogatron reading (oogatron-live.js,
-  // kept on `liveStats`) or the baked one. Built on its first opening and filled on each, and again while open when a
-  // reading arrives; the face is drawn once a page a contributor.
-  const STAT_KINDS = [["commits", "commit", "commits"], ["prs", "PR", "PRs"], ["reviews", "review", "reviews"], ["issues", "issue", "issues"], ["comments", "comment", "comments"]];
-  // The org's .github repository holds its profile and templates, not a project, so it gets no chip.
-  const STAT_FACE_PX = 40, REPO_URL = "https://github.com/OogaBoogaX/", UNLISTED_REPOS = new Set([".github"]);
-  const SINCE = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" });
-  const shortYear = (t) => SINCE.formatToParts(t).map((p) => p.type === "year" ? `\u2019${p.value.slice(-2)}` : p.value).join("");
-  const faces = new Map();
-  // The total and the first contribution stand side by side next to the face: the day with its whole year while they
-  // fit, "’26" once a narrow panel would wrap them, and only past that do they wrap. One answer for the whole roster,
-  // measured with its longest total beside its longest date, so no two strips differ and opening another never changes
-  // one. Fitted again when a total or the strip's width changes, on the bitcoin line's pattern; a hidden strip (width 0)
-  // takes the last answer until it shows.
-  const sinceFits = new Map();
-  let sinceResize = null, sinceShort = false, liveStats = null;
-  // Every login's contributions across the five kinds in the newest reading, worked out once a reading.
-  const tally = { data: null, totals: new Map() };
-  const totals = () => {
-    const data = liveStats || BL.jumbotronData;
-    if (tally.data === data) return tally.totals;
-    tally.data = data;
-    tally.totals.clear();
-    const boards = data && data.leaderboards;
-    if (boards) for (const [kind] of STAT_KINDS) {
-      if (!Array.isArray(boards[kind])) continue;
-      for (const entry of boards[kind]) {
-        const login = entry.login.toLowerCase();
-        tally.totals.set(login, (tally.totals.get(login) || 0) + entry.count);
-      }
-    }
-    return tally.totals;
-  };
+  // A contributor's stats strip (roster-panel.js) reads the newest oogatron reading (oogatron-live.js, kept on
+  // `liveStats`) or the baked one, each contributor's GitHub login and, where the reading has none, first contribution from the character, and their
+  // Ooga's face, drawn here once a page with this page's own renderer.
+  const STAT_FACE_PX = 40;
+  let liveStats = null;
   const loginOf = (contributor, character = BL.characters.get(contributor.name)) => ((character && character.github) || contributor.name).toLowerCase();
-  const contributionsOf = (contributor) => totals().get(loginOf(contributor)) || 0;
   const joinedAt = (contributor, character) => character ? character.joined * 1e3 : contributor.lastCommitAt;
-  const fitSince = () => {
-    let probe = null;
-    for (const fit of sinceFits.values()) if (fit.fitWidth) { probe = fit; break; }
-    if (probe) {
-      let total = "", since = "";
-      for (const row of liveRows.values()) {
-        const character = BL.characters.get(row.contributor.name), joined = joinedAt(row.contributor, character);
-        const count = statCount(totals().get(loginOf(row.contributor, character)) || 0), day = joined > 0 ? SINCE.format(joined) : "";
-        if (count.length > total.length) total = count;
-        if (day.length > since.length) since = day;
-      }
-      const shown = probe.total.textContent;
-      probe.facts.dataset.fit = "line";
-      probe.total.textContent = total; probe.since.textContent = since;
-      sinceShort = probe.facts.scrollWidth > probe.facts.clientWidth;
-      probe.total.textContent = shown;
-    }
-    for (const fit of sinceFits.values()) {
-      fit.since.textContent = sinceShort ? fit.short : fit.long;
-      if (!fit.fitWidth) continue;
-      fit.facts.dataset.fit = "line";
-      if (fit.facts.scrollWidth > fit.facts.clientWidth) fit.facts.dataset.fit = "wrap";
-    }
-  };
-  const statCount = (n) => n >= 1e4 ? BL.game.formatLarge(n) : n.toLocaleString();
-  const countIn = (board, login) => {
-    if (Array.isArray(board)) for (const entry of board) if (entry.login.toLowerCase() === login) return entry.count;
-    return 0;
-  };
-  const countFor = (boards, login) => {
-    let n = 0;
-    if (boards) for (const [kind] of STAT_KINDS) n += countIn(boards[kind], login);
-    return n;
-  };
-  const buildStats = (row) => {
-    const box = document.createElement("div"), face = document.createElement("canvas"), facts = document.createElement("dl");
-    const total = document.createElement("dd"), since = document.createElement("dd"), kinds = document.createElement("p"), repos = document.createElement("div");
-    box.className = "roster-stats"; box.id = `roster-stats-${row.rosterIndex}-${row.contributor.name}`;
-    face.className = "roster-stats-face"; face.setAttribute("role", "img"); face.setAttribute("aria-label", `${row.contributor.display}'s Ooga`);
-    facts.className = "roster-stats-facts";
-    for (const [term, value] of [["Contributions", total], ["Since", since]]) {
-      const pair = document.createElement("div"), dt = document.createElement("dt");
-      dt.textContent = term;
-      pair.append(dt, value);
-      facts.append(pair);
-    }
-    kinds.className = "roster-stats-kinds";
-    // Links in a group, not list items: the roster's own rows are its <li>s.
-    repos.className = "roster-stats-repos"; repos.setAttribute("role", "group"); repos.setAttribute("aria-label", "Repositories");
-    box.append(face, facts, kinds, repos);
-    const stats = row.nodes.stats = { box, face, facts, total, since, kinds, repos, long: "", short: "", fitWidth: 0 };
-    row.li.append(box);
-    sinceFits.set(facts, stats);
-    if (!sinceResize) sinceResize = new ResizeObserver((entries) => {
-      let moved = false;
-      for (const entry of entries) {
-        const fit = sinceFits.get(entry.target), width = Math.round(entry.contentRect.width);
-        if (width === fit.fitWidth) continue;
-        fit.fitWidth = width;
-        moved = true;
-      }
-      if (moved) fitSince();
-    });
-    sinceResize.observe(facts);
-    row.name.setAttribute("aria-controls", box.id);
-  };
-  const fillStats = (row) => {
-    const stats = row.nodes.stats, contributor = row.contributor, character = BL.characters.get(contributor.name);
-    const login = loginOf(contributor, character);
-    if (!faces.has(contributor.name)) {
-      const canvas = document.createElement("canvas");
-      renderFaceIcon(canvas, BL.models.caveman(BL.contributors.traitsFor(contributor.name)), null, STAT_FACE_PX * 2);
-      faces.set(contributor.name, canvas);
-    }
-    const art = faces.get(contributor.name), ctx = stats.face.getContext("2d");
-    stats.face.width = stats.face.height = art.width;
-    ctx.drawImage(art, 0, 0);
-    const joined = joinedAt(contributor, character);
-    stats.long = joined > 0 ? SINCE.format(joined) : "—";
-    stats.short = joined > 0 ? shortYear(joined) : "—";
-    const data = liveStats || BL.jumbotronData;
-    const kinds = [];
-    let sum = 0;
-    for (const [kind, one, many] of STAT_KINDS) {
-      const n = countIn(data && data.leaderboards && data.leaderboards[kind], login);
-      sum += n;
-      if (n) kinds.push(`${statCount(n)} ${n === 1 ? one : many}`);
-    }
-    stats.total.textContent = statCount(sum);
-    fitSince();
-    // Each count stays on one line with its label (and the dot after it), so the line wraps only between them.
-    stats.kinds.replaceChildren();
-    kinds.forEach((text, i) => {
-      const item = document.createElement("span");
-      item.textContent = i < kinds.length - 1 ? `${text}\u00a0·` : text;
-      stats.kinds.append(item, i < kinds.length - 1 ? " " : "");
-    });
-    stats.kinds.hidden = !kinds.length;
-    const list = [];
-    for (const repo of data && Array.isArray(data.repos) ? data.repos : []) {
-      if (UNLISTED_REPOS.has(repo.name)) continue;
-      const listed = Array.isArray(repo.contributors) && repo.contributors.some((c) => c.login.toLowerCase() === login);
-      const n = countFor(repo.leaderboards, login);
-      if (listed || n) list.push({ name: repo.name, n });
-    }
-    list.sort((a, b) => b.n - a.n || (a.name < b.name ? -1 : 1));
-    stats.repos.replaceChildren();
-    for (const { name, n } of list) {
-      const a = document.createElement("a"), count = document.createElement("b");
-      a.href = REPO_URL + name; a.target = "_blank"; a.rel = "noopener";
-      a.title = `${name}: ${n.toLocaleString()} contribution${n === 1 ? "" : "s"}`;
-      count.textContent = statCount(n);
-      a.append(name, count);
-      stats.repos.append(a);
-    }
-    if (!list.length) {
-      const none = document.createElement("span");
-      none.className = "roster-stats-none"; none.textContent = "No repositories in the latest reading";
-      stats.repos.append(none);
-    }
-  };
-  const openStats = (row, open) => {
-    row.open = open;
-    if (open && !row.nodes.stats) buildStats(row);
-    if (open) fillStats(row);
-    if (row.nodes.stats) row.nodes.stats.box.hidden = !open;
-    row.name.setAttribute("aria-expanded", String(open));
+  const faceOf = (contributor) => {
+    const canvas = document.createElement("canvas");
+    renderFaceIcon(canvas, BL.models.caveman(BL.contributors.traitsFor(contributor.name)), null, STAT_FACE_PX * 2);
+    return canvas;
   };
   const paintMarks = (row) => {
     const blocked = !!row.nextLogin && BL.voice.mutedLocally(row.nextLogin);
@@ -2746,5 +2211,48 @@
     }
     if (document.body.dataset.activeScene === scene) nameLeave(`Back to ${place}`);
   };
-  BL.hud = { create, renderIcon, renderFaceIcon, renderBodyIcon, signLettering, showAccount, showMic, showVoices, setDonationStats, donationValueText, toast, offerReload, holdRow, leaveTo, STATE_LABELS, statusFor, voiceIcon, voiceWords };
+  // A scoreboard of faces in `list` (HALLOWEEN: the ghost hunt's hunters; Block Frenzy's live tally). `set(rows, count)`
+  // shows the first `count` of `rows` (`cave` the Ooga whose face shows, `name`, `points`, `lead` for the leader); null
+  // hides the list. A row with `cells` (more counts) is a table's: its name is written beside the face, the cells
+  // follow the points, and `you` marks the visitor's own. The caller passes rows only when something on it changed.
+  // Each place's face is painted again only when the Ooga in it changes. `clear` takes the rows away with the visit.
+  const faceScores = (list) => {
+    const pool = [];
+    const set = (rows, count = 0) => {
+      if (rows === null) { list.hidden = true; return; }
+      list.hidden = false;
+      while (pool.length < count) {
+        const li = document.createElement("li"), canvas = document.createElement("canvas"), points = document.createElement("b");
+        li.className = "ghost-score";
+        canvas.setAttribute("aria-hidden", "true");
+        li.append(canvas, points);
+        pool.push({ li, canvas, points, cave: null, name: null, cells: [] });
+      }
+      for (let i = 0; i < pool.length; i++) {
+        const r = pool[i];
+        if (i >= count) { if (r.li.parentNode) r.li.remove(); continue; }
+        const row = rows[i];
+        if (!r.li.parentNode) list.append(r.li);
+        if (r.cave !== row.cave) {
+          r.cave = row.cave;
+          if (row.cave) renderFaceIcon(r.canvas, row.cave, null, 68);
+          else r.canvas.getContext("2d").clearRect(0, 0, r.canvas.width, r.canvas.height);
+        }
+        r.points.textContent = String(row.points);
+        r.li.title = row.name;
+        r.li.toggleAttribute("data-lead", !!row.lead);
+        if (!row.cells) continue;
+        if (!r.name) { r.name = document.createElement("span"); r.li.insertBefore(r.name, r.points); }
+        r.name.textContent = row.name;
+        r.li.toggleAttribute("data-you", !!row.you);
+        for (let k = 0; k < row.cells.length; k++) {
+          if (!r.cells[k]) r.li.append(r.cells[k] = document.createElement("i"));
+          r.cells[k].textContent = String(row.cells[k]);
+        }
+      }
+    };
+    const clear = () => { for (const r of pool) r.li.remove(); pool.length = 0; };
+    return { set, clear };
+  };
+  BL.hud = { create, renderIcon, renderFaceIcon, renderBodyIcon, faceScores, signLettering, showAccount, openRecipe: showRecipe, showMic, showVoices, setDonationStats, donationValueText, toast, offerReload, holdRow, leaveTo, STATE_LABELS, statusFor, voiceIcon, voiceWords };
 })();

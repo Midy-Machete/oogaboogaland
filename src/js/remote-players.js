@@ -23,6 +23,12 @@
 // (never the scene's input targets, so a live player is seen by a view's crosshair without being tapped, possessed,
 // struck or shot); a body that is not shown (another zone, the visitor's own name) is never found, and the scene's
 // optional `clear` refuses one behind its rock.
+// Ooga Chat speakers on clouds (#659, `net.state.clouds`): where the scene can seat them (`cloudSeat(rec, out)`, the hub's
+// clouds), each gets the same body, built from its character, sitting on its seat's cloud as the crew seats a sitter and
+// carried with it every frame. Its NPC is a ghost while any body here owns that Ooga (a cloud and a driven body
+// together), and solid again only when the last one goes. Its nameplate has a purple dot in place of the green; its
+// reactions come from the room's audience feed (`kind: "react"`, by its id) and its raised hand from its entry. A cloud
+// body is never picked and never blocks anyone: the clouds are scenery.
 // One pool per scene visit: `create` in enter, `dispose` in leave, before the crew's.
 (() => {
   "use strict";
@@ -50,7 +56,7 @@
   const NAME_BOX = Math.round(NAME_PAD_Y * 2 + NAME_LINE), NAME_BOX_HEALTH = Math.round(NAME_PAD_Y * 2 + NAME_LINE + HEALTH_ROW);
   // The font, and where its baseline falls in the name's line as the tooltip's CSS lays it out: read once.
   let nameFont = "", nameBaseline = 0;
-  const NAME_STROKE = "rgba(20, 14, 8, 0.85)", NAME_FILL = "#f3efe4", BAR_TRACK = "rgba(0, 0, 0, 0.55)", ONLINE = "#22c55e";
+  const NAME_STROKE = "rgba(20, 14, 8, 0.85)", NAME_FILL = "#f3efe4", BAR_TRACK = "rgba(0, 0, 0, 0.55)", ONLINE = "#22c55e", CLOUD_DOT = "#b18aff";
   // A reaction's emoji and the raised hand, in CSS pixels over the nameplate's box (or the head's top): how long a
   // reaction shows, how far it rises (further from a raised hand, to clear it), its pop and fade.
   const EMOJI_FONT = "26px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
@@ -90,13 +96,22 @@
   // A scene with `ghost(cave, on)` (the hub, npc-ghosts.js) keeps the crew's copy on its own track instead: never
   // sent away nor marked `remoteControlled`, only drawn as a ghost while the remote body stands beside it.
   // `unarmed` is a place with no weapons: however a body's last pose reads, it shows neither club nor gun there.
-  const create = ({ root, crew = null, fx = null, player = null, posed = null, visible = sameZone, hide = null, createGorilla = null, hideGorilla = null, ghost = null, unarmed = false }) => {
+  const create = ({ root, crew = null, fx = null, player = null, posed = null, visible = sameZone, hide = null, createGorilla = null, hideGorilla = null, ghost = null, unarmed = false, cloudSeat = null, cloudsShown = null }) => {
     const net = BL.net;
     const bodies = new Map();
-    const pets = crew?.pets || BL.crew.createPets({}, root);
+    const pets = crew?.pets || BL.crew.createPets({ fx }, root);
     // The chat subscription, taken on the first update and again after a kept hub's suspend disposed it; the
     // shot and strike subscriptions the same way.
-    let unheard = null, unshot = null, unswung = null, unreacted = null;
+    let unheard = null, unshot = null, unswung = null, unreacted = null, unaudience = null;
+    // Where the scene seats a cloud speaker this frame (`cloudSeat`'s out), and the entry for an id, by a walk of the
+    // room's short list (32 at most) rather than a map kept beside it.
+    const CLOUD_AT = { x: 0, y: 0, z: 0, yaw: 0 };
+    const cloudVoice = (id) => id.startsWith("gh:") ? Number(id.slice(3)) : 0;
+    const cloudOf = (id) => {
+      const list = net.state.clouds;
+      for (let i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+      return null;
+    };
     // `dx`, `dz` and `dy` are what the body's feet and top did in the last update, which a player on its head rides.
     const actorPool = Array.from({ length: MAX }, () => ({ id: null, player: true, x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: 0, radius: BODY_RADIUS, height: BODY_HEIGHT }));
     const actorList = [];
@@ -122,7 +137,7 @@
     };
     const syncPicks = () => {
       pickCount = 0;
-      for (const entry of bodies.values()) if (entry.cave.root.parent === root) gatherPicks(entry.cave.root, entry.pickOwner);
+      for (const entry of bodies.values()) if (!entry.cloud && entry.cave.root.parent === root) gatherPicks(entry.cave.root, entry.pickOwner);
       idlePicks(pickCount);
     };
 
@@ -153,6 +168,8 @@
         return;
       }
       if (hide) hide(entry.name, false);
+      // Another body here still owns this Ooga (a cloud and a driven body at once): it stays a ghost for that one.
+      if (entry.ghosted) for (const other of bodies.values()) if (other !== entry && other.ghosted === entry.ghosted) { entry.ghosted = null; return; }
       if (entry.ghosted) {
         // Solid again where its track has it; nothing else about it changed.
         const ghosted = entry.ghosted;
@@ -169,6 +186,8 @@
       crew.refreshStates(true);
     };
 
+    // A character as the registry names it (claims are case-insensitive), which the crew's map is keyed by.
+    const canonical = (name) => { const c = BL.characters.get(name); return c ? c.handle : name; };
     const build = (rec) => {
       const gorilla = rec.bodyKind === "gorilla" || rec.body.startsWith("gorilla:");
       const decoded = rec.bodyName || (gorilla ? rec.body.slice(8) : rec.body);
@@ -201,7 +220,9 @@
           cave.pet.node.sightHidden = true;
         }
       }
-      const entry = { id: rec.id, body: rec.body, name, gorilla, cave, motion, baseY: gorilla ? 0 : cave.root.position.y, height, top: NaN, dTop: 0, jetNode: null, jetFlame: null, swing: 0, shotAt: -Infinity, lastHeld: 0, lastMode: 0, lastMelee: 0, sampleAt: 0, sampleMelee: 0, sampleFlags: 0, sampleSwap: 0, sampleSwapIndex: 0, x: rec.x, y: rec.y, z: rec.z, yaw: rec.yaw, phase: 0, hidden: null, hiddenOverride: null, ghosted: null, label: "", labelW: 0,
+      const entry = { id: rec.id, body: rec.body, name, gorilla, cave, motion, baseY: gorilla ? 0 : cave.root.position.y, height, top: NaN, dTop: 0,
+        // The walk's step from the last sample, when it came and how fast it turned since the one before.
+        gaitAt: NaN, gaitPhase: 0, gaitRate: 0, puff: 0, jetNode: null, jetFlame: null, swing: 0, shotAt: -Infinity, lastHeld: 0, lastMode: 0, lastMelee: 0, sampleAt: 0, sampleSwap: 0, sampleSwapIndex: 0, x: rec.x, y: rec.y, z: rec.z, yaw: rec.yaw, phase: 0, hidden: null, hiddenOverride: null, ghosted: null, label: "", labelW: 0,
         react: "", reactT: 0, screenX: NaN, plateLeft: NaN, plateTop: NaN, plateW: 0, plateH: 0, plateTextX: NaN, plateBaseline: NaN, plateBarLeft: NaN, plateBarTop: NaN, pickOwner: { kind: "player", id: rec.id, cave, weaponType: "none" } };
       bodies.set(rec.id, entry);
       hideLocal(entry);
@@ -223,26 +244,47 @@
       bodies.delete(entry.id);
     };
 
-    const pose = (entry, dt) => {
-      const { cave } = entry;
-      const parts = cave.parts;
-      parts.armL.rotation.y = parts.armR.rotation.y = 0;
-      parts.armL.rotation.z = 0.12; parts.armR.rotation.z = -0.12;
-      const moved = Math.hypot(entry.dx, entry.dz) / Math.max(dt, 1e-3);
-      if (moved > WALK_SPEED) {
-        entry.phase += dt * 10;
-        const swing = Math.sin(entry.phase);
-        parts.legL.rotation.x = swing * 0.55;
-        parts.legR.rotation.x = -swing * 0.55;
-        parts.armL.rotation.x = -0.2 - swing * 0.3;
-        parts.armR.rotation.x = -0.2 + swing * 0.3;
+    // The body as its own page poses it, through the crew's own poses (`poseGait`, `poseCloseWalk`): its gait, a
+    // close walk's step sideways and back, the shoulder's turn and the peek's lean (`shownLean`, which the weapon
+    // pose applies) from the pose's visual state. A walk goes on from its last sample at the rate it turned between
+    // the last two. An older page's pose has none of it: that body walks at its own step while it moves.
+    const pose = (entry, rec, dt) => {
+      const { cave } = entry, gaits = BL.crew, GAIT = gaits.GAIT;
+      const parts = cave.parts, v = rec.visual;
+      if (v && rec.visualBody) {
+        const gait = v[17], ladder = gait >= 2000;
+        if (gait >= 1 && gait <= 629 || ladder) {
+          const phase = (ladder ? gait - 2000 : gait - 1) / 100;
+          if (rec.visualAt !== entry.gaitAt) {
+            const gap = (rec.visualAt - entry.gaitAt) / 1000, turn = Math.atan2(Math.sin(phase - entry.gaitPhase), Math.cos(phase - entry.gaitPhase));
+            entry.gaitRate = gap > 0.02 && gap < 0.5 ? turn / gap : 10;
+            entry.gaitPhase = phase; entry.gaitAt = rec.visualAt;
+          }
+          gaits.poseGait(cave, ladder ? GAIT.ladder : GAIT.walk, entry.gaitPhase + entry.gaitRate * Math.min(0.3, Math.max(0, (net.serverNow() - entry.gaitAt) / 1000)), v[22] / 100);
+          if (!ladder && (v[19] || v[20])) gaits.poseCloseWalk(cave, v[19] / 100, v[20] === 1);
+        } else {
+          gaits.poseGait(cave, gait === 1000 ? GAIT.fly : gait === 1001 ? GAIT.fall : GAIT.stand);
+          entry.gaitAt = NaN; entry.gaitPhase = entry.gaitRate = 0;
+        }
+        const turn = v[21] / 100;
+        for (let i = 0; i < cave.root.children.length; i++) {
+          const part = cave.root.children[i];
+          part.poseYaw = part === parts.head ? 0 : turn;
+        }
+        cave.shownLean = v[18] / 100;
       } else {
-        entry.phase = 0;
-        parts.legL.rotation.x = parts.legR.rotation.x = 0;
-        parts.armL.rotation.x = parts.armR.rotation.x = -0.2;
+        const moved = Math.hypot(entry.dx, entry.dz) / Math.max(dt, 1e-3);
+        if (moved > WALK_SPEED) {
+          entry.phase += dt * 10;
+          gaits.poseGait(cave, GAIT.walk, entry.phase);
+        } else {
+          entry.phase = 0;
+          gaits.poseGait(cave, GAIT.stand);
+        }
+        cave.shownLean = 0;
       }
       cave.root.position.x = entry.x;
-      cave.root.position.y = entry.y + entry.baseY + Math.abs(Math.sin(entry.phase)) * 0.04;
+      cave.root.position.y = entry.y + entry.baseY;
       cave.root.position.z = entry.z;
       cave.root.rotation.y = entry.yaw;
     };
@@ -268,9 +310,9 @@
     // The visitor's own reaction over their head, and the body whose chat bubble their raised hand lifts.
     let selfReact = "", selfReactT = 0, lifted = null;
     // Their jetpack from the room's `jet` (net.js): the character's built-in one, or the hub's model, put on as the
-    // crew puts one on (`crew.jetpackNode`) the first time it shows. The flame flickers as the crew's does.
+    // crew puts one on (`crew.jetpackNode`) the first time it shows. The flame flickers and sparks as the crew's do.
     let jetClock = 0;
-    const showJet = (entry, rec) => {
+    const showJet = (entry, rec, dt) => {
       const jet = rec.jet, owned = rec.visual && (rec.visual[3] & 4);
       const cave = entry.cave, parts = cave.parts;
       if (!entry.jetNode) {
@@ -278,6 +320,8 @@
         entry.jetNode = parts.jetpack || BL.crew.jetpackNode(cave.root, cave.traits.height, 0, BL.hubModels.jetpack(), BL.hubModels.jetFlame());
         entry.jetFlame = parts.jetpack ? parts.jetFlame : entry.jetNode.children[0];
         cave.presentationJet = { node: entry.jetNode, flame: entry.jetFlame, power: 0 };
+        // Seated on a modelled back as its own page seats it, so what is slung beside it hangs alike.
+        if (!parts.jetpack) BL.crew.seatJetpack(cave, entry.jetNode, BL.hubModels.jetpack(), cave.presentationJet);
       }
       const power = jet >> 1, flame = entry.jetFlame;
       cave.presentationJet.power = power;
@@ -285,6 +329,11 @@
       entry.jetNode.visible = (jet & 1) === 1;
       flame.visible = entry.jetNode.visible && power > 0;
       if (flame.visible) flame.scale.y = (0.7 + Math.sin(jetClock * 40 + entry.id) * 0.3) * power / 2;
+      // Its sparks, as its own page sparks them (`crew.jetSparks`), only while its body shows here.
+      if (flame.visible && cave.root.visible && fx && (entry.puff -= dt) <= 0) {
+        entry.puff = BL.crew.JET_PUFF;
+        BL.crew.jetSparks(fx, cave, power);
+      }
     };
     // The same third-person grip, sling, recoil and reload poses as the local crew. Timers are sampled
     // state, aged on the room's clock; a late join never starts an obsolete action from its beginning.
@@ -326,18 +375,14 @@
       }
       entry.sampleSwap = v ? v[7] : 0; entry.sampleSwapIndex = w.swapMagazine;
       const melee = held === 1 && v ? Math.max(0, v[8] / 1000 - age * (cave.traits.nunchaku ? 1.9 : 1)) : 0;
-      if (held === 1 && v && rec.visualAt !== entry.sampleAt && (v[8] > entry.sampleMelee + 30 || (flags & 128) !== (entry.sampleFlags & 128) || flags & 32 && !w.meleeHeld)) {
-        BL.crew.captureMeleePose(cave);
-      }
       entry.lastMelee = melee;
-      entry.sampleAt = rec.visualAt; entry.sampleMelee = v ? v[8] : 0; entry.sampleFlags = flags;
+      entry.sampleAt = rec.visualAt;
       w.meleeTime = melee;
       w.meleeHeld = held === 1 && fresh && !!(flags & 32);
       if (w.meleeHeld) w.meleeTime = Math.max(0.24, w.meleeTime);
-      w.meleeQuick = !!(flags & 64); w.meleeSide = flags & 128 ? -1 : 1;
       w.meleeHeldTime = v ? Math.min(1.24, v[9] / 1000 + (w.meleeHeld ? age : 0)) : 0;
       w.meleeCharge = v ? v[10] / 100 : 0;
-      w.meleeStrikeTime = w.meleeQuick ? 0.09 : 0.128 * (1 + w.meleeCharge * 0.5);
+      w.meleeStrikeTime = BL.crew.strikeTime();
       w.meleeReadyTime = v ? Math.max(0, v[11] / 1000 - age) : 0;
       w.axeIdle = v ? v[12] / 1000 : 1.3;
       w.bashTime = held === 2 && v ? Math.max(0, v[13] / 1000 - age) : 0;
@@ -374,7 +419,13 @@
       if (fx && !unheard) unheard = net.subscribeChat(heard);
       if (!unreacted && net.subscribeReactions) unreacted = net.subscribeReactions(reacted);
       if (!unshot && net.subscribeShots) { unshot = net.subscribeShots(shotHeard); unswung = net.subscribeSwings(swingHeard); }
+      if (cloudSeat && !unaudience && net.subscribeAudience) unaudience = net.subscribeAudience(cloudReacted);
       for (const entry of bodies.values()) {
+        if (entry.cloud) {
+          const c = cloudOf(entry.id);
+          if (!c || !cloudSeat || canonical(c.character) !== entry.body) { drop(entry); if (cloudsShown) cloudsShown(); }
+          continue;
+        }
         const rec = net.remotes.get(entry.id);
         if (!rec || rec.body !== entry.body) drop(entry);
       }
@@ -413,8 +464,8 @@
         entry.cave.root.visible = visible(rec) && !(!entry.gorilla && crew && crew.player && crew.player.traits.name === entry.name);
         if (entry.gorilla) poseGorilla(entry, rec, dt);
         else {
-          pose(entry, dt);
-          showJet(entry, rec);
+          pose(entry, rec, dt);
+          showJet(entry, rec, dt);
           showWeapon(entry, rec, dt);
           if (unarmed) {
             const { club, gun } = entry.cave.parts;
@@ -442,6 +493,51 @@
       }
       actorList.length = 0;
       for (let i = 0; i < n; i++) actorList.push(actorPool[i]);
+      if (cloudSeat) seatClouds(dt);
+    };
+    // The cloud speakers, seated where the scene says this frame, or hidden where it can't (its clouds are put away).
+    // `cloudsShown()` hears whenever a cloud body comes into view or goes out of it (a crosshair aimed at it can work).
+    const seatClouds = (dt) => {
+      const list = net.state.clouds;
+      let changed = false;
+      for (let i = 0; i < list.length; i++) {
+        const c = list[i];
+        let entry = bodies.get(c.id);
+        if (!entry) {
+          if (bodies.size >= MAX) continue;
+          entry = build({ id: c.id, body: canonical(c.character), bodyKind: "ooga", x: 0, y: 0, z: 0, yaw: 0 });
+          entry.cloud = true;
+          // A cloud speaker sits empty-handed: no primary weapon (club, axe, stick, nunchaku), as the gun already is.
+          const parts = entry.cave.parts;
+          for (const key of ["club", "chuk"]) if (parts[key]) parts[key].visible = false;
+          changed = true;
+        }
+        if (entry.reactT > 0) entry.reactT = Math.max(0, entry.reactT - dt);
+        const seated = cloudSeat(c, CLOUD_AT) && !(crew && crew.player && crew.player.traits.name === entry.name);
+        if (entry.cave.root.visible !== seated) changed = true;
+        entry.cave.root.visible = seated;
+        if (seated) poseCloud(entry);
+      }
+      if (changed && cloudsShown) cloudsShown();
+    };
+    // Sitting on the cloud as an idle Ooga sits by a fire (crew.js `poseGroundSit`): legs out before it, arms hanging
+    // with the fists resting on the cloud, the head straight, the root a little over the seat's surface (`sitPlayer`),
+    // facing where the scene turned the seat.
+    const poseCloud = (entry) => {
+      const cave = entry.cave, parts = cave.parts, p = cave.root.position;
+      BL.crew.poseGroundSit(cave);
+      parts.head.quaternion = null;
+      parts.head.rotation.x = parts.head.rotation.y = 0;
+      cave.shownLean = 0;
+      p.x = entry.x = CLOUD_AT.x; entry.y = CLOUD_AT.y; p.z = entry.z = CLOUD_AT.z;
+      p.y = CLOUD_AT.y + cave.traits.height * 0.08;
+      cave.root.rotation.y = entry.yaw = CLOUD_AT.yaw;
+    };
+    // A reaction an Ooga Chat speaker sent, over their cloud body.
+    const cloudReacted = (msg) => {
+      if (msg.kind !== "react" || typeof msg.id !== "string") return;
+      const entry = bodies.get(msg.id), c = entry && entry.cloud ? cloudOf(msg.id) : null;
+      if (c && c.zone === msg.zone && BL.reactionPolicy.valid(msg.e)) { entry.react = msg.e; entry.reactT = REACT_TIME; }
     };
 
     const actors = () => actorList;
@@ -571,7 +667,7 @@
       for (const entry of bodies.values()) {
         // Until laid out again, a body has no plate to report.
         entry.plateLeft = NaN;
-        const rec = net.remotes.get(entry.id);
+        const rec = entry.cloud ? cloudOf(entry.id) : net.remotes.get(entry.id);
         if (!rec || !entry.cave.root.visible) continue;
         headMinX = Infinity; headMaxX = -Infinity; headTop = Infinity;
         projectHead(entry.cave.parts.head, project);
@@ -593,7 +689,8 @@
         entry.screenX = mid; entry.plateLeft = left; entry.plateTop = top; entry.plateW = boxW; entry.plateH = boxH;
         entry.plateTextX = textX; entry.plateBaseline = line + nameBaseline;
         // A reaction and the raised hand over the plate's box, centred on it (clamped with it at the view's edge).
-        if (entry.reactT > 0 || rec.hand) drawReaction(ctx, left + boxW / 2, top, entry.react, entry.reactT, rec.hand ? (rec.handEmoji || BL.reactionPolicy.HANDS[rec.handTone]) : "");
+        const hand = entry.cloud ? rec.hand : rec.hand ? rec.handEmoji || BL.reactionPolicy.HANDS[rec.handTone] : "";
+        if (entry.reactT > 0 || hand) drawReaction(ctx, left + boxW / 2, top, entry.react, entry.reactT, hand);
         ctx.strokeStyle = NAME_STROKE;
         ctx.fillStyle = NAME_FILL;
         ctx.strokeText(rec.display, textX, line + nameBaseline);
@@ -603,7 +700,7 @@
         ctx.lineWidth = 1.5;
         ctx.stroke();
         ctx.lineWidth = 3;
-        ctx.fillStyle = ONLINE;
+        ctx.fillStyle = entry.cloud ? CLOUD_DOT : ONLINE;
         ctx.fill();
         if (showHealth) {
           // The tooltip's second row: centred under the name's row, after the row gap less the bar's top margin.
@@ -616,11 +713,15 @@
           ctx.fillStyle = rec.ko ? BAR_KO : BAR_FILL;
           ctx.fillRect(left, top, Math.round(BAR_W * Math.max(0, Math.min(100, rec.hp)) / 100), BAR_H);
         }
-        if (!rec.voice) continue;
+        // A cloud speaker is always in voice; the room says only whether their microphone is muted.
+        if (!entry.cloud && !rec.voice) continue;
+        const muted = entry.cloud ? rec.mic === "muted" : rec.muted;
         const ix = Math.round(textX + entry.labelW + ICON_GAP), iy = Math.round(lineMid - 4.5);
-        ctx.fillStyle = rec.muted ? ICON_MUTED : BL.voice.speaking(rec.id) ? ICON_SPEAKING : ICON_IDLE;
+        // Speaking as the page hears it, a cloud speaker's voice keyed by their account (the number in their `gh:` id).
+        const voiceId = entry.cloud ? cloudVoice(rec.id) : rec.id;
+        ctx.fillStyle = muted ? ICON_MUTED : voiceId && BL.voice.speaking(voiceId) ? ICON_SPEAKING : ICON_IDLE;
         runs(ctx, SPEAKER, ix, iy);
-        runs(ctx, rec.muted ? CROSS : WAVES, ix, iy);
+        runs(ctx, muted ? CROSS : WAVES, ix, iy);
       }
       ctx.restore();
     };
@@ -663,7 +764,8 @@
       if (unheard) unheard();
       if (unshot) { unshot(); unswung(); }
       if (unreacted) unreacted();
-      unheard = unshot = unswung = unreacted = null;
+      if (unaudience) unaudience();
+      unheard = unshot = unswung = unreacted = unaudience = null;
       selfReact = ""; selfReactT = 0;
       if (lifted) { lifted.speechLift = 0; lifted = null; }
       for (const entry of [...bodies.values()]) drop(entry);
@@ -684,7 +786,26 @@
         textX: entry.plateTextX, baseline: entry.plateBaseline, barLeft: entry.plateBarLeft, barTop: entry.plateBarTop, barWidth: BAR_W,
         headX: entry.screenX, textWidth: entry.labelW, font: nameFont, spacing: NAME_SPACING } : null;
     };
-    const pool = { update, actors, pick, drawNames, liveGeometry, stats, setUnderlying, nameplate, dispose, body: id => bodies.get(id)?.cave || null };
+    // The top middle of a body's nameplate as last laid out, written into `out` (x, y in CSS pixels): for a mark drawn
+    // over it each frame (a duel's health bar). False while it has none.
+    const plateTop = (id, out) => {
+      const entry = bodies.get(id);
+      if (!entry || !Number.isFinite(entry.plateLeft)) return false;
+      out.x = entry.plateLeft + entry.plateW / 2; out.y = entry.plateTop;
+      return true;
+    };
+    // Each cloud speaker shown now, as `fn(x, y, z, id)` at the seat's surface under them.
+    const cloudSpots = (fn) => {
+      for (const entry of bodies.values()) if (entry.cloud && entry.cave.root.visible) fn(entry.x, entry.y, entry.z, entry.id);
+    };
+    // Where cloud speaker `id` sits now (`out` at the seat's surface), or false while they are not shown.
+    const cloudSpot = (id, out) => {
+      const entry = bodies.get(id);
+      if (!entry || !entry.cloud || !entry.cave.root.visible) return false;
+      out.x = entry.x; out.y = entry.y; out.z = entry.z;
+      return true;
+    };
+    const pool = { update, actors, pick, drawNames, liveGeometry, stats, setUnderlying, nameplate, plateTop, cloudSpots, cloudSpot, dispose, body: id => bodies.get(id)?.cave || null };
     return pool;
   };
 

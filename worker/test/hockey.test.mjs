@@ -45,7 +45,9 @@ const harness = t => {
     return accepted[before];
   };
   const send = (ws, msg) => h.room.webSocketMessage(ws, JSON.stringify(msg.t === "hockey" ? { v: 4, ...(msg.k === "join" ? { e: 0 } : {}), ...msg } : msg));
-  h.join=join;h.send=send;h.wake=async()=>{if(h.room.flushTimer)clearTimeout(h.room.flushTimer);h.room=new context.Room(ctx,{});await initialized;return h.room;};
+  // A room hibernates only once its timers have run: the pose save fires (settle), the snapshot is dropped.
+  h.settle=()=>{if(h.room.poseTimer){clearTimeout(h.room.poseTimer);h.room.savePoses();}};
+  h.join=join;h.send=send;h.wake=async()=>{if(h.room.flushTimer)clearTimeout(h.room.flushTimer);h.settle();h.room=new context.Room(ctx,{});await initialized;return h.room;};
   return h;
 };
 const W = protocol.HOCKEY;
@@ -97,7 +99,7 @@ test("an older live attachment is closed on wake and older clients cannot join o
   assert.equal(s.q,-1,"old host frames cannot drive a v4 match");
   h.send(b.ws,{t:"hockey",v:undefined,k:"input",i:0,s:s.s,q:0,x:1000,y:500});
   assert.equal(messages(a.ws).length,before,"old input cannot drive a v3 match");
-  a.ws.store.hockey.wire=3;await h.wake();
+  h.settle();a.ws.store.hockey.wire=3;await h.wake();
   assert.equal(h.room.hockeyTables[0],null,"legacy live attachment cannot restore");
   assert.equal(a.ws.store.hockey,null,"legacy attachment is cleared");
   assert.ok(messages(a.ws).some(m=>m.k==="table"&&m.phase==="closed"),"seats are notified of closure");
@@ -329,7 +331,7 @@ test("shared hockey presentation derives one solo Clanker and head scores from t
   const cave=()=>{const r=node(),head=node();head.geometry={};addChild(r,head);return {root:r,parts:{head,armR:node()},headOpen:{},headClosed:{}};};
   const humans=new Map([[1,cave()],[2,cave()]]);
   let now=10000;
-  const BL={hockeyWire:W,net:{state:{me:{id:1},body:"a",selfId:1},hockeyTables:tables,serverNow:()=>now},
+  const BL={hockeyWire:W,net:{state:{me:{id:3},body:"c",selfId:3},hockeyTables:tables,serverNow:()=>now},
     scene:{addChild,removeChild,createNode:opts=>Object.assign(node(),opts),boundsOf:()=>({min:[-.2,0,-.2],max:[.2,1,.2]})},
     models:{caveman:cave},contributors:{traitsFor:()=>({})},crew:{bodyHeightOf:()=>2},arcadeModels:{staffHat:()=>({})},
     agent:{create:()=>{const r=cave();r.poseManaged=(dt,x,y,z,yaw,speed)=>{Object.assign(r.root.position,{x,y,z});r.speed=speed;};r.dispose=()=>removeChild(root,r.root);r.liveGeometry=()=>{};rigs.push(r);return r;}}};
@@ -341,6 +343,10 @@ test("shared hockey presentation derives one solo Clanker and head scores from t
   now+=2400;view.update(.1);assert.equal(rigs[0].root.position.x,W.TABLES[0][0]);assert.equal(rigs[0].speed,0);
   const a=frame();a[8]=a[14]=2;a[9]=a[15]=3;tables[0].a=a;
   const scores=[],ctx={save(){},restore(){},strokeText(){},fillText:s=>scores.push(s)};view.draw(ctx,(x,y)=>({x,y}));assert.deepEqual(scores,["2","3"]);
+  // The hall visitor has already left even when the cached table still owns their old seat.
+  BL.net.state.selfId=1;scores.length=0;view.draw(ctx,(x,y)=>({x,y}));
+  assert.deepEqual(scores,["3"],"a stale seat cannot attach a hockey score to the returning visitor");
+  BL.net.state.selfId=3;
   tables[0].ids=[1,2];view.update(.1);assert.equal(root.children.length,0,"two humans never retain a Clanker");
   tables[0].ids=[1,0];view.update(.1);assert.equal(rigs[1].root.position.x,W.TABLES[0][0],"late viewers use server start time rather than replaying the approach");
   tables[0]=null;view.update(.1);assert.equal(root.children.length,0);

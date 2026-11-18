@@ -1323,7 +1323,6 @@
   };
   // An on-chain payment seen before its block: true when the kiosk holding its invoice shows it.
   const onSeen = (id, sats, due, left, pricing) => !!(scene.booth.flow && scene.booth.flow.seen(id, sats, due, left, pricing));
-  const onLootCleared = () => {};
 
   const build = () => {
     const L = LAYOUT, s = {
@@ -1741,6 +1740,11 @@
   const reloadPolicy = { near: () => false, available: () => false };
   const walkableFor = (ax, az, bx, bz, y, height, actor) => actor === avatar && walkTunnel(bx, bz) || FM.walkable(ax, az, bx, bz, y, actor.bodyRadius || 0.35, height);
   const ceilingFor = (x, z, feet, actor) => FM.stairCeilingAt(x, z, feet, actor.bodyRadius || 0.35);
+  // A reload of this tab stands where the Ooga stood (visit-spot.js), while the floor is still there to walk on from.
+  const stoodAt = (ctx) => {
+    const spot = ctx.from === null && !ctx.place ? BL.visitSpot.take("factory", "") : null;
+    return spot && Math.abs(groundFor(spot.x, spot.z, spot.y, spot.y, avatar) - spot.y) < 0.05 && BL.visitSpot.holds(spot, walkableFor, avatar) ? spot : null;
+  };
   // In the air, keep the same obstacle clearance without requiring the floor to be within a step.
   const flyableFor = (ax, az, bx, bz, y, height, actor) => {
     const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.2)), radius = actor.bodyRadius || 0.35;
@@ -1812,7 +1816,7 @@
     ({ renderer, game, world, go, agentPlay } = ctx);
     camera = createCamera({ fov: 55, near: 0.3, far: 150 });
     root = createNode();
-    hud = hudMod.create({ signal: ctx.signal, roster: contributors.activeRoster, catalog: models.SWAG, tierColors: models.TIER_COLORS, renderIcon: hudMod.renderIcon, lootEnabled: ctx.lootEnabled, escapeHeld: () => !!scene.booth.mode });
+    hud = hudMod.create({ signal: ctx.signal, roster: contributors.activeRoster, escapeHeld: () => !!scene.booth.mode });
     hud.setAreaLabel("LF");
     hooks = {};
     input = interactMod.create({ canvas: ctx.canvas, renderer, camera, hooks });
@@ -1890,13 +1894,14 @@
     });
     hud.setDestinations(Object.keys(VIEW_NAMES), VIEW_NAMES);
     hud.setAreaLabel("Lightning Factory");
-    hud.el.modeDestination.title = "Lightning Factory · cycle stations";
-    hud.el.modeDestinationLabel.textContent = "Lightning Factory views. Press to cycle stations";
+    hud.el.modeDestination.title = "Lightning Factory · choose a viewpoint";
+    hud.el.modeDestinationLabel.textContent = "Lightning Factory views. Open Map to choose a viewpoint";
     const presetView = (name) => {
-      if (leaving || !VIEW_NAMES[name]) return;
+      if (leaving || !VIEW_NAMES[name]) return false;
       endBooth(scene);
       pilot.goPreset(name);
       hud.setDetachedView(name, true);
+      return true;
     };
     hud.onPreset(presetView);
     hud.onAction((action, value) => {
@@ -1904,7 +1909,7 @@
       else if (action === "leave") leaveCave();
       else if (action === "factory-mute") hud.toast(audio.setMuted(!audio.muted) ? "Sound off" : "Sound on");
       else if (action === "reset-view") pilot.resetCamera();
-      else if (action === "mode-preset") presetView(value);
+      else if (action === "mode-preset") return presetView(value);
       else if (action === "act") { if (!greeter || !greeter.act()) pilot.action(); }
       else if (action.startsWith("mode-")) pilot.modeAction(action);
     });
@@ -1970,7 +1975,10 @@
       // shield, it comes on through the gate's in its light instead, and walks on to that step.
       if (crossing) walkIn(crossing);
       else if (fromHangar && scene.hangar) walkInHangar(fromHangar);
-      else pilot.navigate(arrival);
+      else {
+        const stood = stoodAt(ctx);
+        pilot.navigate(stood ? { yaw: stood.yaw - Math.PI, pitch: arrival.pitch, dist: arrival.dist, position: stood } : arrival);
+      }
       scene.gate.phase.body.track(avatar.root, avatar.traits.height * 2, Math.max(avatar.headOpen.verts.length, avatar.headClosed.verts.length));
       for (const t of scene.tunnels) t.body.track(avatar.root, avatar.traits.height * 2, Math.max(avatar.headOpen.verts.length, avatar.headClosed.verts.length));
       if (scene.hangar) scene.hangar.phase.body.track(avatar.root, avatar.traits.height * 2, Math.max(avatar.headOpen.verts.length, avatar.headClosed.verts.length));
@@ -2234,6 +2242,7 @@
       const p = drivenHere.root.position;
       BL.net.sendPose(p.x, p.y - drivenHere.baseY, p.z, drivenHere.root.rotation.y, null, 0, BL.crew.weaponFlags(drivenHere), BL.crew.visualState(drivenHere));
       BL.net.setHealth(drivenHere.health.value, drivenHere.health.stunned);
+      if (!walk.phase && !leaving) BL.visitSpot.note("factory", "", drivenHere);
     }
     remotes.update(dt);
     footsteps.update(drivenHere);
@@ -2594,7 +2603,7 @@
     // Voice zone: the Factory group, which its tunnel on the island shares (`factory`).
     voiceZone: "factory.hall",
     micKey: true,
-    id: "factory", prepare, buildSteps: () => FM.buildSteps(), warmSteps, enter, update, overlay, onDonation, previewDonation, onSeen, onKey, onLootCleared, renderOpts: RENDER_OPTS, stay, leave, stats, liveGeometry, allGeometry, hallGeometry,
+    id: "factory", prepare, buildSteps: () => FM.buildSteps(), warmSteps, enter, update, overlay, onDonation, previewDonation, onSeen, onKey, renderOpts: RENDER_OPTS, stay, leave, stats, liveGeometry, allGeometry, hallGeometry,
     root: null, camera: null, input: null, debug: null, agent: null, agentView: null, agentControls: null, agentHandoff: null,
     // Diagnostics observe the existing detached owner without reading model caches.
     get retainedGeometry() { return world ? world.factoryKeep : null; },
