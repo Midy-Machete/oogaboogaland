@@ -15,40 +15,10 @@
 // that comes straight back after a refresh speaks again, muted, as after a dropped socket. It starts no island system: no
 // renderer, scene, socket or game. A failure shows a recoverable error with Reload;
 // pagehide disposes the shell, the account and the adapter.
-(() => 
+(() => {
   "use strict";
   const BL = window.BL = window.BL || {};
-  
-const { storageKey, sweep, parseReturn, withoutReturn, parseZone, appBuild } = BL.oogaChatConfig;
-const { chat, device: deviceBar, bananas, roster: contributingOogas, commons, online } = BL.oogaChatViews;
-
-
-const karaoke = () => {
-  const node = document.createElement("section");
-  node.className = "oc-karaoke";
-
-  const heading = document.createElement("h2");
-  heading.textContent = "🎤 Proof of Voice";
-
-  const description = document.createElement("p");
-  description.textContent =
-    "Welcome to the Ooga Booga Land Karaoke Lounge!";
-
-  const message = document.createElement("p");
-  message.textContent =
-    "Built by Midy-Machete and Humble Warrior. Live karaoke coming soon!";
-
-  node.append(heading, description, message);
-
-  return {
-    node,
-    update() {},
-    dispose() { node.remove(); }
-  };
-};
-
-
-
+  const { storageKey, sweep, parseReturn, withoutReturn, parseZone, appBuild } = BL.oogaChatConfig, { chat, device: deviceBar, bananas, roster: contributingOogas, commons, online } = BL.oogaChatViews;
   const { gates } = BL.oogaChatAuth;
   const root = document.getElementById("ooga-chat");
   const fixture = root.dataset.adapter === "fixture";
@@ -352,7 +322,7 @@ const karaoke = () => {
     }, tabs: [
       { id: "chat", label: "Ooga Chat", icon: "cloud", visible: () => true, view: chat },
       { id: "bananas", label: "Bananas", icon: "bananas", visible: () => true, view: bananas },
-{ id: "karaoke", label: "Proof of Voice", icon: "chat", visible: () => true, view: karaoke },
+      { id: "karaoke", label: "Proof of Voice", icon: "chat", visible: () => true, view: BL.oogaChatViews.pending("Proof of Voice", "Welcome to the Ooga Booga Land Karaoke Lounge! Built by Midy-Machete. Live karaoke coming soon!") },
       { id: "roster", label: "Contributing Oogas", icon: "roster", visible: () => true, view: contributingOogas },
       { id: "players", label: "Online Oogas", icon: "players", visible: contributor, view: online },
       { id: "commons", label: "The Commons", icon: "chat", visible: contributor, view: commons }

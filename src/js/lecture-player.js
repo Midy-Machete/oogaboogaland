@@ -44,6 +44,7 @@
     let ctx = null, pan = null, source = null, heardSide = 0, heardAhead = 1;
     // The mastered recording plays at 90%, through either the sound graph or the element.
     const LEVEL = 0.9;
+    const soundChannel = BL.sound.channel("lecture");
     const wire = () => {
       if (!audio || source || typeof AudioContext === "undefined" || typeof PannerNode === "undefined") return;
       if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
@@ -54,7 +55,7 @@
           pan.panningModel = "equalpower"; pan.distanceModel = "inverse"; pan.rolloffFactor = 0; pan.refDistance = 1;
           const level = ctx.createGain();
           level.gain.value = LEVEL;
-          pan.connect(level); level.connect(BL.sound.output(ctx));
+          pan.connect(level); level.connect(soundChannel.node(ctx));
         }
         source = ctx.createMediaElementSource(audio);
         source.connect(pan);
@@ -81,6 +82,8 @@
     };
     const hush = () => { if (synth && speaking) { speaking = false; synth.cancel(); } spoken = -1; };
     const unmute = BL.sound.subscribe((muted) => { if (audio) audio.muted = muted; if (muted) hush(); });
+    // Through the graph the channel's own node carries the level; a bare element takes it as its volume.
+    soundChannel.subscribe((gain) => { if (audio && !source) audio.volume = LEVEL * gain; });
     const sync = () => { if (timeline) LK.at(timeline, t, state); version++; };
     // One rate for the recording and the fallback clock; its times and all authored cues stay in lecture seconds.
     const setSpeed = (rate) => {
@@ -208,10 +211,10 @@
         const left = progress[next.id];
         passed = left ? left.q || 0 : 0;
         t = left && !left.done && left.t < timeline.duration - 20 ? landing(Math.max(0, left.t - 4)) : 0;
-        // A recording is a file of the staged site's (scripts/site.mjs); the source tree and the portable page have
-        // none to ask for, and play to the recording's times with captions.
-        if (timeline.recorded && next.audio && BL.deferredScripts) {
-          audio = new Audio(); audio.preload = "none"; audio.playbackRate = speed; audio.preservesPitch = true; audio.volume = LEVEL; audio.addEventListener("error", () => { audio = null; });
+        // A recording is served by the site's Worker from R2 (worker/src/lecture-audio.js); the source tree and the
+        // portable page have none to ask for, and play to the recording's times with captions.
+        if (timeline.audio && BL.deferredScripts) {
+          audio = new Audio(); audio.preload = "none"; audio.playbackRate = speed; audio.preservesPitch = true; audio.volume = LEVEL * soundChannel.gain; audio.addEventListener("error", () => { audio = null; });
           // Hidden tabs run no scene frames. Media events must advance the same cue state, gates and completion
           // as a frame, including the final event when the recording has already paused at its end.
           const recording = audio;
@@ -219,7 +222,7 @@
           recording.addEventListener("timeupdate", mediaTick);
           recording.addEventListener("ended", mediaTick);
           // Selecting a lecture creates the element; only play() asks for the recording.
-          recording.src = next.audio;
+          recording.src = timeline.audio;
         }
         sync();
         return true;
@@ -229,7 +232,7 @@
       spoken = i;
       if (!synth || BL.sound.muted) return;
       utterance = new SpeechSynthesisUtterance(timeline.sentences[i].text);
-      utterance.rate = 1.04 * speed; utterance.pitch = 0.92;
+      utterance.rate = 1.04 * speed; utterance.pitch = 0.92; utterance.volume = soundChannel.gain;
       utterance.onend = utterance.onerror = () => { speaking = false; };
       speaking = true;
       synth.speak(utterance);
@@ -274,7 +277,7 @@
       },
       // The end of the sentence being said: where a lecture stops for a question.
       sentenceEnd: () => { if (!timeline) return 0; const s = timeline.sentences[state.sentence]; return s.start + s.length; },
-      dispose: () => { opening++; close(); unmute(); if (ctx) { ctx.close().catch(() => {}); ctx = null; } },
+      dispose: () => { opening++; close(); unmute(); soundChannel.release(); if (ctx) { ctx.close().catch(() => {}); ctx = null; } },
       get entry() { return entry; }, get timeline() { return timeline; }, get time() { return t; }, get playing() { return playing; }, get ended() { return ended; },
       get recorded() { return !!audio; }, get version() { return version; }
     };

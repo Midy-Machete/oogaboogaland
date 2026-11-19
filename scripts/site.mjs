@@ -3,7 +3,8 @@
 // route in src/js/routes.js gets a real page of its own: oogarally.html answers /oogarally with a 200, its own
 // title, description, canonical address and preview card, and the router opens the rally from the path.
 // Each is the whole built page with its own head. 404.html sends a miscased or slash-ended route
-// (/OogaRally/) to its address and anything else home; sitemap.xml and robots.txt list the routes, llms.txt
+// (/OogaRally/) to its address and anything else home; map.html is the World Map, a page of its own
+// (scripts/distribution-map.mjs); sitemap.xml and robots.txt list the routes and the map, llms.txt
 // points an AI asked to make someone a character to docs/make-your-ooga.md, and cards/ holds the card images from `npm run cards`; a route without an `image` uses home's. Modules tagged
 // `data-defer` move out of the pages into js/<group>-<hash>.js (scripts/distribution-modules.mjs), fetched when needed.
 // `--audio-assets` and `--image-assets` write the DSB entrance recordings and the pictures in PICTURE_MODULES (the DSB
@@ -20,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { externalizeAudio } from "./distribution-audio.mjs";
 import { stageIcons } from "./distribution-icons.mjs";
+import { MAP_ENTRY, stageMap } from "./distribution-map.mjs";
 import { PICTURE_MODULES, externalizeModules, externalizePage, externalizePictures } from "./distribution-modules.mjs";
 import { writeTerrainWorker } from "./distribution-terrain.mjs";
 
@@ -46,14 +48,8 @@ for (const source of mediaContext.BL.studioMedia.sources) for (const path of [so
   mediaFiles.add(path.slice(7));
 }
 for (const file of mediaFiles) copyFileSync(join(root, "src/media", file), join(out, "media", file));
-// A lecture's recording, staged once the lecture has its timing file (scripts/lecture-script.mjs --import writes both).
-const lectureAudio = join(root, "src/media/lectures");
-if (existsSync(lectureAudio)) for (const file of readdirSync(lectureAudio)) {
-  const id = /^([a-z]+-\d\d)\.m4a$/.exec(file);
-  if (!id || !existsSync(join(root, "src/js", `lecture-${id[1]}.timing.js`))) continue;
-  mkdirSync(join(out, "media/lectures"), { recursive: true });
-  copyFileSync(join(lectureAudio, file), join(out, "media/lectures", file));
-}
+// Lecture recordings are never staged: the Worker serves /media/lectures/* from R2 (worker/src/lecture-audio.js), and
+// `npm run serve` answers them itself (scripts/serve.mjs).
 
 let shell = readFileSync(join(root, "oogaboogaland.html"), "utf8");
 // Search crawlers and browsers need fetchable favicon URLs: the portable page's exact PNG bytes at stable paths, with
@@ -102,6 +98,8 @@ for (const entry of list) {
   if (!existsSync(image)) throw new Error(`cards/${entry.image}.jpg is missing; run npm run cards`);
   copyFileSync(image, join(out, "cards", `${entry.image}.jpg`));
 }
+// The World Map (scripts/distribution-map.mjs): a page of its own, not the game's, at /map.
+stageMap(root, out, head(MAP_ENTRY));
 writeFileSync(join(out, "404.html"), `<!doctype html>
 <html lang="en">
 <head>
@@ -115,7 +113,7 @@ writeFileSync(join(out, "404.html"), `<!doctype html>
 `);
 writeFileSync(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${list.map((entry) => `  <url><loc>${urlOf(entry)}</loc></url>`).join("\n")}
+${[...list, MAP_ENTRY].map((entry) => `  <url><loc>${urlOf(entry)}</loc></url>`).join("\n")}
 </urlset>
 `);
 writeFileSync(join(out, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${site}/sitemap.xml\n`);
@@ -134,6 +132,7 @@ What happens after: a plain Ooga is merged the day after it is sent and a custom
 
 ## More
 
+- [The World Map](${site}/map): every place in the world, how each is reached, and its address
 - [The repository](${repo})
 - [Rules for agents changing the game](${repo}/blob/rock/AGENTS.md)
 `);
@@ -146,4 +145,4 @@ if (headers > 0) {
   writeFileSync(join(out, "_headers"), `${rules}\n${files.map((path) => `\n${path}\n  Cache-Control: public, max-age=31536000, immutable`).join("")}\n`);
 }
 const kb = (n) => `${(n / 1024).toFixed(0)} KB`;
-console.log(`staged ${out}: ${list.length} pages of ${kb(shell.length)}, ${list.filter((entry) => entry.image).length} cards, sitemap.xml, robots.txt, llms.txt`);
+console.log(`staged ${out}: ${list.length} pages of ${kb(shell.length)}, ${list.filter((entry) => entry.image).length} cards, map.html, sitemap.xml, robots.txt, llms.txt`);

@@ -418,11 +418,21 @@ publications change (a chat speaker going live, an island speaker's publication 
 new voice without polling. A mute changes no publication and asks nobody to sync.
 
 **Durable cleanup.** Every close goes through a queue kept in storage (`mediaCleanup`) and retried by the alarm until
-the SFU confirms (`close_track_error` counts as gone) or an hour has passed, after every client has left too. A
+the SFU confirms (`close_track_error` counts as gone, and so does a session the SFU answers 404 or 410 for, with or
+without an error code: Cloudflare documents 410 for `session_error` alone, a session gone for good) or an hour has passed
+since the job was first queued, after every client has left too. An alarm's pass runs at most four jobs at once and
+starts none 20 s after it began (`cleanupPass` in `sfu.js`), what is left waiting for the next wake, which starts with
+the jobs this one never reached (those it tried and that failed go to the back of the queue): a serial pass over
+slow 410s, five seconds each, once held a wake for seven minutes. A
 session whose tracks are unknown (a failed call) is swept whole, and any track that sweep finds and fails to close is
 kept for the next try. Two runs over one job (the alarm's and a new close merged into it) never remove another job. With
-64 jobs pending, publishing and receiving wait
-(`cleanup_pending`) while giving things up still works. A woken object restores each connection's media from
+64 jobs pending, the oldest jobs for sessions no live connection holds are let go to make room: their pages closed those
+connections (Ooga Chat closes its media with its socket, on a leave and before opening another), so nothing flows on
+them while the SFU stops answering. Only a queue full of sessions still held makes publishing and receiving wait
+(`cleanup_pending`), while giving things up still works. The island's Room keeps its own voice cleanup queue to the
+same bound and rule. Likewise an outdoor subscription counts as unconfirmed (the Room's `closed` waits on it) only while
+a live connection holds its session: a listener that leaves releases the speaker's grant at once, without waiting the
+hour a close the SFU keeps refusing would take. A woken object restores each connection's media from
 `media:<connId>` and sweeps the sessions of a socket that went while it slept.
 
 **Ops** (`POST /api/chat/media/<op>`, body `{ connection, generation?, sdp?, mid?, mids? }`, at most 256 KiB, one at a
