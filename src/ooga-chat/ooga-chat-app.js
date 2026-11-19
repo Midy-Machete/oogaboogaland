@@ -322,6 +322,7 @@
     }, tabs: [
       { id: "chat", label: "Ooga Chat", icon: "cloud", visible: () => true, view: chat },
       { id: "bananas", label: "Bananas", icon: "bananas", visible: () => true, view: bananas },
+      { id: "karaoke", label: "Proof of Voice", icon: "chat", visible: () => true, view: BL.oogaChatViews.pending("Proof of Voice", "Welcome to the Ooga Booga Land Karaoke Lounge! Built by Midy-Machete. Live karaoke coming soon!") },
       { id: "roster", label: "Contributing Oogas", icon: "roster", visible: () => true, view: contributingOogas },
       { id: "players", label: "Online Oogas", icon: "players", visible: contributor, view: online },
       { id: "commons", label: "The Commons", icon: "chat", visible: contributor, view: commons }

@@ -10482,8 +10482,8 @@ const oogaChatAppChecks = async () => {
       }
     }
     const tabsFor = (who) => [320, 390, 1024].map((w) => layout[`${who}@${w}`].tabs);
-    const gated = tabsFor("signed-out").every((t) => t === "chat,bananas,roster") && tabsFor("listener").every((t) => t === "chat,bananas,roster")
-      && tabsFor("contributor").every((t) => t === "chat,bananas,roster,players,commons");
+    const gated = tabsFor("signed-out").every((t) => t === "chat,bananas,karaoke,roster") && tabsFor("listener").every((t) => t === "chat,bananas,karaoke,roster")
+      && tabsFor("contributor").every((t) => t === "chat,bananas,karaoke,roster,players,commons");
     const fits = Object.values(layout).every((l) => l.ok && l.heights.length === 1);
     record("Ooga Chat page: every tab is the island's own titled panel inside its frame at 320, 390 and 1024 pixels, no page wider than the screen, one frame height for every tab, and the tabs offered by who the visitor is",
       gated && fits, JSON.stringify(Object.fromEntries(Object.entries(layout).map(([k, l]) => [k, { tabs: l.tabs, ok: l.ok, heights: l.heights }]))));
